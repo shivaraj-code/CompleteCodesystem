@@ -1,0 +1,19 @@
+server:
+  port: 1337
+spring:
+  application:
+    name: registry
+---
+spring:
+  profiles: dev
+  cloud:
+    config:
+      uri: http://10.0.0.104:8888
+      label: dev
+---
+spring:
+  profiles: local,default
+  cloud:
+    config:
+      uri: http://localhost:8888
+      label: localsiva
