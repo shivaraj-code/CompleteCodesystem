@@ -1,0 +1,19 @@
+server:
+  port: 8888
+
+spring:
+  application:
+    name: config-service
+  cloud:
+    config:
+      server:
+        git:
+          uri: file:D:\Updated - codesystem\codesystem-ms-config
+          #uri: https://github.com/KavanantGlobal/cardio-ms-config.git
+          clone-on-start: false
+      label: localsiva
+management:
+  endpoints:
+    web:
+      exposure:
+        include: "*"
