@@ -1,0 +1,84 @@
+eureka:
+  client:
+    fetchRegistry: true
+    registerWithEureka: true
+    serviceUrl:
+      defaultZone: ${RPM_EUREKA_SERVER:http://localhost:1337/eureka/}
+    # improve refresh time
+    registryFetchIntervalSeconds: 5
+  # improve refresh time
+  instance.leaseRenewalIntervalInSeconds: 5
+  server.response-cache-update-interval-ms: 1000
+link:
+    expiration: 3600
+jwt:
+    expiration: 604800
+    header: Authorization
+    issuer: ${RPM_JWT_ISSUER:holter.io}
+    prefix: Bearer
+    route:
+      authentication:
+        create: /sandeep
+        refresh: /refresh
+    secret: ${RPM_SECRET_KEY:my^hol67TR}
+
+spring:
+  datasource:
+    url: ${RPM_DB_URL:jdbc:mysql://localhost:3306/codesystem?autoReconnect=true&serverTimezone=UTC&createDatabaseIfNotExist=true&allowPublicKeyRetrieval=true&useSSL=false}
+    username: ${CARDIO_DB_USER:root}
+    password: ${CARDIO_DB_PASSWORD:Vijay@422}
+    platform: mysql
+    hikari:
+      minimumIdle: 5
+      maximumPoolSize: 20
+      connectionTimeout: 30000
+      # leakDetectionThreshold: 10000
+      idleTimeout: 30000
+      maxLifetime: 2000000
+      poolName: Hikaripool_codesearch
+  jpa:
+    hibernate:
+      ddl-auto: none
+      jdbc:
+        time_zone: UTC
+  main:
+    allow-bean-definition-overriding: true
+
+holter:
+  apigateway:
+    url: ${RPM_GATEWAY_URL:http://localhost:8090}
+cardio:
+  config:
+    aws:
+      region: ${RPM_AWS_REGION:ap-south-1}
+#       accessKey: ENC(5LPEc5Qt/h/WhX9g01UgvRyPmd+MxQzT2MletVYQ02U=)
+#       secretKey: ENC(n4pwMuEvx97LgwfHl6FyKKGj4H9YVgtJvmHw8qXFrvJyv/19GKHMDij/CJqPBYr2wsUwlKYhI48=)
+    ses:
+      region:  ${RPM_AWS_REGION:ap-south-1}
+#       accessKey: ENC(crdoHqXGiU43p+esD/L0VRs1QvKBSCA5oK1myOiXkzc=)
+#       secretKey: ENC(ZXq8wgUlcgQqH2Dl8BH0ydqqFOrujL9eJezMH41zKaLaIKoJGck4zMdsySb07BrR7YbR6OxTxlo=)
+      port: 587
+      host: ${RPM_EMAIL_HOST:email-smtp.ap-south-1.amazonaws.com}
+      fromEmail: ${RPM_SUPPORT_EMAIL:support@kavanant.com}
+    bucket: cardio-new-dev-assets
+jasypt:
+ encryptor:
+  password: Cardio-Secret-!290Dev
+
+
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: "*"
+logging:
+  level:
+    com.zaxxer.hikari.HikariConfig: DEBUG
+    com.zaxxer.hikari: TRACE
+   
+servlet:
+  multipart:
+    max-file-size: 100MB
+    max-request-size: 100MB
+        

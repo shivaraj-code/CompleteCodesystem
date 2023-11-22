@@ -1,0 +1,40 @@
+bitrhythm:
+  username: Mediprimeadmin
+  password: PrimeKav@686868ieieie
+spring:
+  cloud:
+    gateway:
+      httpclient:
+        connect-timeout: 5000
+        response-timeout: 300s
+      routes:
+        - id: codesystem-swagger
+          uri: lb://swagger
+          predicates:
+            - Path=/swagger/**
+          filters:
+            - RewritePath=/swagger/(?<path>.*), /$\{path}
+        - id: codesystem-search
+          uri: lb://search-service
+          predicates:
+            - Path=/search/**
+          filters:
+            - RewritePath=/search/(?<path>.*), /$\{path}
+        - id: codesystem-maintenance
+          uri: lb://maintenance-service
+          predicates:
+            - Path=/codemaintenance/**
+          filters:
+            - RewritePath=/codemaintenance/(?<path>.*), /$\{path}
+        - id: codesystem-management
+          uri: lb://management-service
+          predicates:
+            - Path=/management/**
+          filters:
+            - RewritePath=/management/(?<path>.*), /$\{path}
+        - id: config-app
+          uri: http://10.0.0.104:8888
+          predicates:
+            - Path=/config/**
+          filters:
+            - RewritePath=/config/(?<path>.*), /$\{path}
