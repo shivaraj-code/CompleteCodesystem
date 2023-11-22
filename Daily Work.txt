@@ -1,0 +1,806 @@
+Date:17/10/2023:
+================
+1)async percentage issue 
+2)async endpoint spaces not required.
+3)csv double quotes read code:
+
+CSVFormat format = CSVFormat.EXCEL
+	                    .withDelimiter(',')
+	                    .withQuote('"')
+	                    .withHeader();
+--------------------------
+CSVFormat format = CSVFormat.EXCEL
+                    .withQuote('"')
+                    .withEscape('"')
+                    .withDelimiter(',')
+                    .withHeader(); // Assumes the first row contains column names
+            CSVParser parser = new CSVParser(fileReader, format);
+
+ CSVParser csvParser = new CSVParser(
+        reader,
+        CSVFormat.EXCEL
+            .withQuote('"')
+            .withEscape('\\')
+            .withDelimiter(',')
+            .withFirstRecordAsHeader()
+    );
+------------------------------------------------------------------------------------------------------------------------------------------------
+Date:18/10/2023:
+================
+1)deleted record with data check in base table. --
+2)asyn try catch pending.-- 
+3)async fileProcess name change and sync also --done
+
+<dependency>
+	<groupId>com.opencsv</groupId>
+	<artifactId>opencsv</artifactId>
+	<version>5.5.2</version>
+</dependency>
+
+
+
+try (BufferedReader reader = new BufferedReader(new InputStreamReader(targetDataFileStream))) {
+  CSVParser csvParser = new CSVParserBuilder()
+    .withSeparator(',') // Set your separator
+    .withQuoteChar('"') // Set your quote character
+    .withEscapeChar('\\') // Set the escape character for nested quotes
+    .build();
+  Iterable<CSVRecord> csvRecords = CSVFormat.DEFAULT
+    .withFirstRecordAsHeader()
+    .withParser(csvParser) // Use the custom parser
+    .parse(reader);
+  for (CSVRecord data : csvRecords) {
+    MedicineStandardModel entity = new MedicineStandardModel();
+    entity.setId(Integer.parseInt(data.get(0)));
+    entity.setNdc(data.get(1));
+    entity.setName(data.get(2));
+    entity.setDea(Integer.parseInt(data.get(3)));
+    entity.setObsdtec(data.get(4));
+    entity.setRepack(Integer.parseInt(data.get(5));
+    entity.setIsCompounded(data.get(6));
+    medicineList.add(entity);
+  }
+  // No need to explicitly close the parser; it will be closed when the reader is closed.
+  return medicineList;
+} catch (IOException e) {
+  e.printStackTrace();
+}
+
+/*				  CSVFormat format = CSVFormat.EXCEL 
+						  .withQuote('"') 
+						//  .withEscape('"')
+						  .withDelimiter(',')
+						  .withHeader(); // Assumes the first row contains column  names 
+				 CSVParser csvParser = new CSVParser(reader,CSVFormat.DEFAULT.withFirstRecordAsHeader()); 
+				  Iterable<CSVRecord> csvRecords = csvParser.getRecords();
+*/
+
+Date:18/10/2023:
+================
+1)Delete procedure cross check
+------------------------------------------------------------------------------------------------------------------------------
+Date:20/10/2023:
+================
+1)Medicines Delete:
+---------------------
+
+CREATE DEFINER=`dv_cs_db_admin`@`localhost` PROCEDURE `MedicineDeletedSyncProcedure`(IN IN_file_id INT,
+IN file_name varChar(100),
+IN user_id INT)
+BEGIN
+DECLARE deleted_records INT DEFAULT 0;
+       -- Step 4: (Delete) Update status for codes not in cpt_standard_versions but in cptnew
+    UPDATE medicines_new ex
+    left JOIN medicines_standard_versions dump ON dump.ndc = ex.ndc and dump.id =ex.id
+    SET ex.version_state='InValidated', ex.modified_date=now(), ex.file_id=IN_file_id, ex.modified_by=user_id
+    where dump.ndc is null  and ex.status ='Y'  and ex.version_state='Validated';
+    -- step 5:(Delete) Insert the deleted codes change status 'N'
+    INSERT INTO medicines_new (id, ndc, name, dea, obsdtec, repack, is_compounded,
+    file_id,created_by,modified_by,data_source,version_state,status,sync_status)
+    SELECT  ex.id,ex.ndc,ex.name,ex.dea,ex.obsdtec,ex.repack,ex.is_compounded,
+    IN_file_id,user_id,user_id,file_name,'Validated','N','Deleted'
+    FROM medicines_new ex
+    left JOIN medicines_standard_versions dump ON dump.ndc = ex.ndc and dump.id =ex.id
+    where dump.ndc is null;
+    -- Update the deleted_records count
+    SET deleted_records = ROW_COUNT();
+    -- Return the record counts
+   UPDATE code_change_counts SET deleted_records = deleted_records WHERE file_id = IN_file_id AND status = "Post Sync";
+    -- Return success status
+    SELECT 0 AS id, 0 AS added_records, 0 AS updated_records, deleted_records AS deleted_records, 'Post Sync' AS status;
+    END
+============================
+2)icd Delete:
+--------------
+
+CREATE DEFINER=`root`@`localhost` PROCEDURE `IcdDeletedRecordsSync`(IN IN_file_id INT,
+IN file_name varChar(100),
+IN user_id INT
+)
+BEGIN
+DECLARE deleted_records INT DEFAULT 0;
+
+-- Step 4: (Delete) Update status for codes not in icd_standard_versions but in icdnew
+    UPDATE icdnew ex
+    left JOIN icd_standard_versions dump ON dump.icd_code = ex.icd_code
+    SET ex.version_state='InValidated', ex.modified_date=now(), ex.file_id=IN_file_id, ex.modified_by=user_id
+    where dump.icd_code is null  and ex.status ='Y'  and ex.version_state='Validated';
+    
+    -- step 5:(Delete) Insert the deleted codes change status 'N'
+    
+    INSERT INTO icdnew (icd_id, icd_code,icd_order,type, short_desc, medium_desc, long_desc,
+    file_id,created_by,modified_by,data_source,version_state,status,sync_status)
+    
+    SELECT ex.icd_id,ex.icd_code,ex.icd_order,ex.type,ex.short_desc,ex.medium_desc,ex.long_desc,
+    IN_file_id,user_id,user_id,file_name,'Validated','N','Deleted'
+    FROM icdnew ex 
+    left JOIN icd_standard_versions dump ON dump.icd_code = ex.icd_code
+    where dump.icd_code is null;
+    
+    -- Updating RefId, Original_refid for newly Deleting Records
+    UPDATE icdnew SET ref_id = id, original_ref_id = id  WHERE  ref_id IS NULL;
+    
+    -- Update the deleted_records count
+    SET deleted_records = ROW_COUNT();
+    
+     UPDATE code_change_counts set deleted_records=deleted_records,user_id=user_id where  file_id=IN_file_id and status="Post Sync";
+     
+      SELECT 1 as id, 0 as added_records, 0 as updated_records , 0 as deleted_records,'success' status;
+ END
+
+
+====
+173531--first file last record
+196606--second file start
+198609=last record
+198653--third file start
+202748--second option
+202748
+202748--fourth file start
+
+
+=====================
+icd:
+95842--first file last record
+131071--ddl autoincrement.
+131074--second file last record for added
+131078--ddl auto
+
+--------------------------------------------------------------------------------------------------------------------------------------------------
+Date:25/10/2023:
+================
+1)async failed condition fix--in code--done
+2)in update and delete state file id issue fix --procedure -done
+3)
+==============
+CREATE TABLE `medicines_new` (
+  `ai_id` int NOT NULL AUTO_INCREMENT,
+  `id` int DEFAULT NULL,
+  `ndc` varchar(45) DEFAULT NULL,
+  `name` text,
+  `dea` int DEFAULT NULL,
+  `obsdtec` varchar(45) DEFAULT NULL,
+  `repack` int DEFAULT NULL,
+  `is_compounded` varchar(45) DEFAULT NULL,
+  `data_source` varchar(245) DEFAULT NULL,
+  `version_state` varchar(45) DEFAULT 'Validated',
+  `status` varchar(5) DEFAULT 'Y',
+  `is_controlled_substance` tinyint DEFAULT '0',
+  `ref_id` int DEFAULT NULL,
+  `original_ref_id` int DEFAULT NULL,
+  `created_by` int DEFAULT NULL,
+  `created_date` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
+  `modified_by` int DEFAULT NULL,
+  `modified_date` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
+  `file_id` int DEFAULT NULL,
+  `sync_status` varchar(45) DEFAULT NULL,
+  PRIMARY KEY (`ai_id`),
+  KEY `idx_ndc` (`ndc`),
+  KEY `idx_id` (`id`)
+) ENGINE=InnoDB AUTO_INCREMENT=200700 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci
+
+Date:30/10/2023:
+================
+1)revert file count stored in codechangecount--working
+----------------------------------------------------------------------------------------------------------------------------------------------
+Date:01/11/2023:
+================
+1)existing table count showing only validated and status Y records. ---code(in repo)
+2)after sync ViewDetails change to empty.---code(in service)
+
+------------------------------------------------------------------------------------------------------------------------------------------------
+Date:03/11/2023:
+================
+@GetMapping("/cptcode/search")
+	public Page<CptCode> getCptCodeByCodeOrShort(@RequestParam(value = "searchstring") String codeOrShort,
+			@RequestParam(defaultValue = "10") Integer pageSize, @RequestParam(defaultValue = "0") Integer pageNumber,
+			@RequestParam(value = "sortBy", required = false, defaultValue = "Newest First") String sortBy,
+			@RequestParam(value = "sortOrder", required = false, defaultValue = "ASC") String sortOrder) {
+		return cptCodeService.getCptWithSearchPagenation(codeOrShort, pageSize, pageNumber, sortBy, sortOrder);
+	}
+
+----
+@Override
+	public Page<CptCode> getCptWithSearchPagenation(String codeOrShort, Integer pageSize, Integer pageNumber,
+			String sortBy,String sortOrder) {
+		// TODO Auto-generated method stub
+		Pageable pageable;
+		 if(sortOrder.equalsIgnoreCase("ASC")) {
+		       
+			//if (sortBy.equals("Oldest First")) {
+			// System.out.println(sortBy + "SortBy");
+			pageable = PageRequest.of(pageNumber, pageSize, Sort.by(Sort.Direction.ASC, "id"));
+		} else {
+			pageable = PageRequest.of(pageNumber, pageSize, Sort.by(Sort.Direction.DESC, "id"));
+		}
+		return cptCodeRepository.getCptCodeByCodeOrShort(codeOrShort, pageable);
+	}
+============================
+public Page<VersionSummary> getAllergiesVersionSummaryData(int fileId, int userId) {
+		// TODO Auto-generated method stub
+		VersionSummary versionSummary = new VersionSummary();
+
+		/*
+		 * String existingversion = versionSummary.getCurrentVersion(); int
+		 * existingrecords = versionSummary.getCurrentVersionTotalRecords(); Timestamp
+		 * existingdate = versionSummary.getCurrentVersionProcessedDate();
+		 * 
+		 * versionSummary.setPreviousVersion(existingversion);
+		 * versionSummary.setPreviousVersionTotalRecords(existingrecords);
+		 * versionSummary.setPreviousVersionProcessedDate(existingdate);
+		 */
+
+		
+		CodeMaintenanceFile file = codeMaintenanceFileService.getCodeMaintenanceFileById(fileId);
+		String releaseVersion = file.getReleaseVersion();
+		int fileId1 = file.getId();
+		int userid = file.getUserId();
+		String codestandard = file.getCodeStandard();
+		Timestamp newModifiedDate = Timestamp.valueOf(LocalDateTime.now());
+		int totalValidRecords = getAllergiesTotalRecords(fileId);
+		
+		versionSummary.setCurrentVersion(releaseVersion);
+		versionSummary.setFileId(fileId1);
+		versionSummary.setUserId(userid);
+		versionSummary.setCodeStandard(codestandard);
+		versionSummary.setCurrentVersionProcessedDate(newModifiedDate);
+		versionSummary.setCurrentVersionTotalRecords(totalValidRecords);
+		// versionSummary.gettotalrecords()
+
+		versionSummaryRepository.save(versionSummary);
+
+		return null;
+	}
+
+	public int getAllergiesTotalRecords(int fileId) {
+
+		return allergiesVersionSummaryRepository.currentVersionAllergiesTotalRecords(fileId);
+	}
+
+==============================================================================================================================================
+Date:06/11/2023:
+================
+public Page<VersionSummary> getAllergiesVersionSummaryData(int fileId, int userId) {
+    VersionSummary versionSummary = new VersionSummary();
+
+    CodeMaintenanceFile file = codeMaintenanceFileService.getCodeMaintenanceFileById(fileId);
+    String releaseVersion = file.getReleaseVersion();
+    int fileId1 = file.getId();
+    int userid = file.getUserId();
+    String codestandard = file.getCodeStandard();
+    Timestamp newModifiedDate = Timestamp.valueOf(LocalDateTime.now());
+    int totalValidRecords = getAllergiesTotalRecords(fileId);
+
+    // Check if this is the first file or not
+    VersionSummary lastVersionSummary = versionSummaryRepository.findTopByOrderByCurrentVersionProcessedDateDesc();
+    if (lastVersionSummary != null) {
+        // Update previous_version, previous_version_total_records, and previous_version_processed_date
+        versionSummary.setPreviousVersion(lastVersionSummary.getCurrentVersion());
+        versionSummary.setPreviousVersionTotalRecords(lastVersionSummary.getCurrentVersionTotalRecords());
+        versionSummary.setPreviousVersionProcessedDate(lastVersionSummary.getCurrentVersionProcessedDate());
+    }
+
+    // Set current version data
+    versionSummary.setCurrentVersion(releaseVersion);
+    versionSummary.setFileId(fileId1);
+    versionSummary.setUserId(userid);
+    versionSummary.setCodeStandard(codestandard);
+    versionSummary.setCurrentVersionProcessedDate(newModifiedDate);
+    versionSummary.setCurrentVersionTotalRecords(totalValidRecords);
+
+    // Save the version summary
+    versionSummaryRepository.save(versionSummary);
+
+    return null;
+}
+-----------------------------------------------------------------------------------------------------------------------------------------
+
+Date:07/11/2023:
+================
+public List<VersionSummary> getAllergiesVersionSummaryData(int fileId, int userId) {
+
+		VersionSummary versionSummary = new VersionSummary();
+
+		CodeMaintenanceFile file = codeMaintenanceFileService.getCodeMaintenanceFileById(fileId);
+		// String releaseVersion = file.getReleaseVersion();
+		// int fileId1 = file.getId();
+		// int userid = file.getUserId();
+		// String codestandard = file.getCodeStandard();
+		// Timestamp newModifiedDate = Timestamp.valueOf(LocalDateTime.now());
+		int totalValidRecords = getAllergiesTotalRecords(fileId);
+
+		// Check if this is the first file or not
+		// VersionSummary lastVersionSummary =
+		// versionSummaryRepository.findTopByOrderByCurrentVersionProcessedDateDesc(fileId,
+		// file.getCodeStandard());
+		VersionSummary lastVersionSummary = versionSummaryRepository
+				.findTopByFileIdAndCodeStandardOrderByCurrentVersionProcessedDateDesc(file.getId(),
+						file.getCodeStandard());
+		System.out.println("outside if Statement............");
+		System.out.println("LastversionSummary----------"+lastVersionSummary);
+		System.out.println("CodeStandard======="+file.getCodeStandard());
+		if (lastVersionSummary != null && "allergies".equals(file.getCodeStandard())) {
+			// Update previous_version, previous_version_total_records, and
+			// previous_version_processed_date
+			System.out.println("inside if statement............");
+			versionSummary.setPreviousVersion(lastVersionSummary.getCurrentVersion());
+			versionSummary.setPreviousVersionTotalRecords(lastVersionSummary.getCurrentVersionTotalRecords());
+			versionSummary.setPreviousVersionProcessedDate(lastVersionSummary.getCurrentVersionProcessedDate());
+			System.out.println("After if statement............");
+		}
+
+		// Set current version data
+		versionSummary.setCurrentVersion(file.getReleaseVersion());
+		versionSummary.setFileId(file.getId());
+		versionSummary.setUserId(file.getUserId());
+		versionSummary.setCodeStandard(file.getCodeStandard());
+		versionSummary.setCurrentVersionProcessedDate(Timestamp.valueOf(LocalDateTime.now()));
+		versionSummary.setCurrentVersionTotalRecords(totalValidRecords);
+
+		// Save the version summary
+		versionSummaryRepository.save(versionSummary);
+
+		return null;
+	}
+------------------------------------
+public List<VersionSummary> getMedicineVersionSummaryData(int fileId, int userId) {
+		// TODO Auto-generated method stub
+		VersionSummary versionSummary = new VersionSummary();
+
+	    CodeMaintenanceFile file = codeMaintenanceFileService.getCodeMaintenanceFileById(fileId);
+	    //String releaseVersion = file.getReleaseVersion();
+	   // int fileId1 = file.getId();
+	   // int userid = file.getUserId();
+	   // String codestandard = file.getCodeStandard();
+	   // Timestamp newModifiedDate = Timestamp.valueOf(LocalDateTime.now());
+	    int totalValidRecords = getMedicineTotalRecords(fileId);
+
+	    // Check if this is the first file or not
+	  //  List<VersionSummary> lastVersionSummary = versionSummaryRepository.findTopByOrderByCurrentVersionProcessedDateDesc(fileId, file.getCodeStandard());
+	    VersionSummary lastVersionSummary = versionSummaryRepository
+				.findFirstByFileIdAndCodeStandardOrderByCurrentVersionProcessedDateDesc(file.getId(),
+						file.getCodeStandard());
+	    System.out.println("outside if Statement............");
+	    System.out.println("CodeStandard------------"+file.getCodeStandard());
+	    System.out.println("LatVersionSummary==========="+lastVersionSummary);
+	    if (lastVersionSummary != null && "medicine".equals(file.getCodeStandard())) {
+	        // Update previous_version, previous_version_total_records, and previous_version_processed_date
+	    	System.out.println("inside if Statement............");
+	        versionSummary.setPreviousVersion(lastVersionSummary.getCurrentVersion());
+	        versionSummary.setPreviousVersionTotalRecords(lastVersionSummary.getCurrentVersionTotalRecords());
+	        versionSummary.setPreviousVersionProcessedDate(lastVersionSummary.getCurrentVersionProcessedDate());
+	        System.out.println("After if Statement............");
+	    }
+
+	    // Set current version data
+	    versionSummary.setCurrentVersion(file.getReleaseVersion());
+	    versionSummary.setFileId(file.getId());
+	    versionSummary.setUserId(file.getUserId());
+	    versionSummary.setCodeStandard(file.getCodeStandard());
+	    versionSummary.setCurrentVersionProcessedDate(Timestamp.valueOf(LocalDateTime.now()));
+	    versionSummary.setCurrentVersionTotalRecords(totalValidRecords);
+	    
+	    // Save the version summary
+	    versionSummaryRepository.save(versionSummary);
+
+	    return null;
+	}
+--------------------------------------------------------------------------------------------------------------------------------------------------
+Date:08/11/2023:
+================
+
+allergies code verification::
+
+    {
+        "acceptedAllergiesCodes": [
+        {
+            "acceptedCode": "estriol",
+            "snomedCode": ""
+        },{
+            "acceptedCode": "Beta-Blockers (Beta-Adrenergic Blocking Agts)",
+            "snomedCode": "373254001"
+        }],
+   "rejectedAllergiesCodes": []
+}
+
+-----------------------------
+ {
+        "acceptedAllergiesCodes": [
+        {
+            "acceptedCode": "Iodinated Contrast Media",
+            "snomedCode": "426722004"
+        },{
+            "acceptedCode": "Zofran",
+            "snomedCode": ""
+        }],
+   "rejectedAllergiesCodes": []
+}
+
+--------------------------------------------------------------------------------------------------------------------------------------
+Date:17/11/2023:
+=================
+@GetMapping("/codestandardfile/list")
+public ResponseEntity<Page<CodeMaintenanceFile>> getCodeStandardFileDetails(
+        @RequestParam String processedState,
+        @RequestParam String codeStandard,
+        @RequestParam int pageSize,
+        @RequestParam int pageNumber,
+        @RequestParam(value = "sortBy", required = false, defaultValue = "Newest First") String sortBy,
+        @RequestParam(value = "sortOrder", required = false, defaultValue = "DESC") String sortOrder) {
+
+    Page<CodeMaintenanceFile> files;
+
+    if ("All".equalsIgnoreCase(processedState) && "All".equalsIgnoreCase(codeStandard)) {
+        files = codeMaintenanceFileService.getAllCodeStandards(pageSize, pageNumber, sortBy, sortOrder);
+    } else if ("All".equalsIgnoreCase(processedState)) {
+        files = codeMaintenanceFileService.getByCodeStandard(codeStandard, pageSize, pageNumber, sortBy, sortOrder);
+    } else if ("All".equalsIgnoreCase(codeStandard)) {
+        files = codeMaintenanceFileService.getByProcessedState(processedState, pageSize, pageNumber, sortBy, sortOrder);
+    } else {
+        files = codeMaintenanceFileService.getCodeStandardFileDetails(processedState, codeStandard, pageSize, pageNumber, sortBy, sortOrder);
+    }
+
+    HttpHeaders headers = new HttpHeaders();
+    return new ResponseEntity<>(files, headers, HttpStatus.OK);
+}
+-----------------------
+
+@GetMapping("/codestandardfile/list")
+	public ResponseEntity<Page<CodeMaintenanceFile>> getCodeStandardFileDetails(@RequestParam String processedState,
+			@RequestParam String codeStandard, @RequestParam int pageSize, @RequestParam int pageNumber,
+			@RequestParam(value = "sortBy", required = false, defaultValue = "Newest First") String sortBy,
+			@RequestParam(value = "sortOrder", required = false, defaultValue = "DESC") String sortOrder) {
+
+		Page<CodeMaintenanceFile> files = null;
+
+		if ("All".equalsIgnoreCase(processedState)) {
+			files = codeMaintenanceFileService.getCodeStandardFileDetails(pageSize, pageNumber, sortBy, sortOrder);
+		} else {
+			files = codeMaintenanceFileService.getByProcessedState(processedState, pageSize, pageNumber, sortBy,
+					sortOrder);
+		}
+		if ("All".equalsIgnoreCase(codeStandard)) {
+			files = codeMaintenanceFileService.getAllCodeStandards(pageSize, pageNumber, sortBy, sortOrder);
+		} else {
+			files = codeMaintenanceFileService.getByCodeStandard(codeStandard, pageSize, pageNumber, sortBy, sortOrder);
+		}
+
+		HttpHeaders headers = new HttpHeaders();
+		return new ResponseEntity<>(files, headers, HttpStatus.OK);
+	}
+
+-----------------------------
+public Page<CodeMaintenanceFile> getCodeStandardFileDetails(String processedState, String codeStandard,
+			int pageSize, int pageNumber, String sortBy, String sortOrder) {
+		// TODO Auto-generated method stub
+		Pageable pageable = PageRequest.of(pageNumber, pageSize);
+		if (sortOrder.equalsIgnoreCase("ASC")) {
+
+			// if (sortBy.equals("Oldest First")) {
+			// System.out.println(sortBy + "SortBy");
+			pageable = PageRequest.of(pageNumber, pageSize, Sort.by(Sort.Direction.ASC, "id"));
+		} else {
+			pageable = PageRequest.of(pageNumber, pageSize, Sort.by(Sort.Direction.DESC, "id"));
+		}
+		return codeMaintenanceFileRepository.findByCodeStandardDetails(codeStandard,codeStandard, pageable);
+	}
+
+------------------------------------------------------------------------------
+1)
+@GetMapping("/codestandardfile/list")
+	public ResponseEntity<Page<CodeMaintenanceFile>> getCodeStandardFileList(@RequestParam String processedState,
+	        @RequestParam String codeStandard,
+	        @RequestParam int pageSize,
+	        @RequestParam int pageNumber,
+	        @RequestParam(value = "sortBy", required = false, defaultValue = "id") String sortBy,
+	        @RequestParam(value = "sortOrder", required = false, defaultValue = "DESC") String sortOrder) {
+
+	    Page<CodeMaintenanceFile> codeMaintenanceFiles = codeMaintenanceFileService
+	            .getCodeStandardFileList(processedState, codeStandard, pageSize, pageNumber, sortBy, sortOrder);
+	    HttpHeaders headers = new HttpHeaders();
+	    return new ResponseEntity<>(codeMaintenanceFiles, headers, HttpStatus.OK);
+	}
+
+
+2)
+public Page<CodeMaintenanceFile> getCodeStandardFileList(String processedState, String codeStandard, int pageSize,
+			int pageNumber, String sortBy, String sortOrder) {
+		Pageable paging;
+
+		if (sortOrder.equalsIgnoreCase("DESC")) {
+			paging = PageRequest.of(pageNumber, pageSize, Sort.by(Sort.Direction.DESC, sortBy));
+		} else {
+			paging = PageRequest.of(pageNumber, pageSize, Sort.by(Sort.Direction.ASC, sortBy));
+		}
+
+		List<CodeMaintenanceFile> fileList = codeMaintenanceFileRepository
+				.findByCodeStandardAndProcessedState(processedState, codeStandard);
+
+		int start = (int) paging.getOffset();
+		int end = Math.min((start + paging.getPageSize()), fileList.size());
+
+		Page<CodeMaintenanceFile> pagedResult = new PageImpl<>(fileList.subList(start, end), paging, fileList.size());
+		return pagedResult;
+	}
+==================================================================
+Date:20/11/2023:
+------------------
+
+	@GetMapping("/list/filter/processedstate")
+	public ResponseEntity<Page<CodeMaintenanceFile>> getCodeStandardFileList(@RequestParam String processedState,
+			@RequestParam int pageSize, @RequestParam int pageNumber,
+			@RequestParam(value = "sortBy", required = false, defaultValue = "Newest First") String sortBy,
+			@RequestParam(value = "sortOrder", required = false, defaultValue = "DESC") String sortOrder) {
+
+		Page<CodeMaintenanceFile> files = null;
+
+		if ("All".equalsIgnoreCase(processedState)) {
+			files = codeMaintenanceFileService.getCodeStandardFileDetails(pageSize, pageNumber, sortBy, sortOrder);
+		} else {
+			files = codeMaintenanceFileService.getByProcessedState(processedState, pageSize, pageNumber, sortBy,
+					sortOrder);
+		}
+		HttpHeaders headers = new HttpHeaders();
+		return new ResponseEntity<>(files, headers, HttpStatus.OK);
+	}
+
+	@GetMapping("/list/filter/codestandard")
+	public ResponseEntity<Page<CodeMaintenanceFile>> getCodeStandardFile(@RequestParam String codeStandard,
+			@RequestParam int pageSize, @RequestParam int pageNumber,
+			@RequestParam(value = "sortBy", required = false, defaultValue = "Newest First") String sortBy,
+			@RequestParam(value = "sortOrder", required = false, defaultValue = "DESC") String sortOrder) {
+
+		Page<CodeMaintenanceFile> files = null;
+
+		if ("All".equalsIgnoreCase(codeStandard)) {
+			files = codeMaintenanceFileService.getCodeStandardList(pageSize, pageNumber, sortBy, sortOrder);
+		} else {
+			files = codeMaintenanceFileService.getByCodeStandard(codeStandard, pageSize, pageNumber, sortBy, sortOrder);
+		}
+		HttpHeaders headers = new HttpHeaders();
+		return new ResponseEntity<>(files, headers, HttpStatus.OK);
+	}
+---------------------------------
+	public Page<CodeMaintenanceFile> getCodeStandardFileDetails(int pageSize, int pageNumber, String sortBy,
+			String sortOrder) {
+		// TODO Auto-generated method stub
+		Pageable paging = PageRequest.of(pageNumber, pageSize);
+		if (sortOrder.equalsIgnoreCase("DESC")) {
+
+			paging = PageRequest.of(pageNumber, pageSize, Sort.by(Sort.Direction.DESC, "id"));
+		} else {
+			paging = PageRequest.of(pageNumber, pageSize, Sort.by(Sort.Direction.ASC, "id"));
+		}
+		return codeMaintenanceFileRepository.findAll(paging);
+	}
+
+	public Page<CodeMaintenanceFile> getByProcessedState(String processedState, int pageSize, int pageNumber,
+			String sortBy, String rsotOrder) {
+		// TODO Auto-generated method stub
+		Pageable paging = PageRequest.of(pageNumber, pageSize);
+		if (sortOrder.equalsIgnoreCase("DESC")) {
+
+			paging = PageRequest.of(pageNumber, pageSize, Sort.by(Sort.Direction.DESC, "id"));
+		} else {
+			paging = PageRequest.of(pageNumber, pageSize, Sort.by(Sort.Direction.ASC, "id"));
+		}
+		return codeMaintenanceFileRepository.findByProcessedState(processedState,paging);
+	}
+
+	public Page<CodeMaintenanceFile> getCodeStandardList(int pageSize, int pageNumber, String sortBy,
+			String sortOrder) {
+		// TODO Auto-generated method stub
+		Pageable paging= PageRequest.of(pageNumber, pageSize);
+		if(sortOrder.equalsIgnoreCase("DESC")) {
+			paging=PageRequest.of(pageNumber, pageSize, Sort.by(Sort.Direction.DESC,"id"));
+		}else {
+			paging=PageRequest.of(pageNumber, pageSize, Sort.by(Sort.Direction.ASC, "id"));
+		}
+		return codeMaintenanceFileRepository.findAll(paging);
+	}
+
+	public Page<CodeMaintenanceFile> getByCodeStandard(String codeStandard, int pageSize, int pageNumber, String sortBy,
+			String sortOrder) {
+		// TODO Auto-generated method stub
+		Pageable paging=PageRequest.of(pageNumber, pageSize);
+		if(sortOrder.equalsIgnoreCase("DESC")) {
+			paging=PageRequest.of(pageNumber, pageSize, Sort.by(Sort.Direction.DESC, "id"));
+		}else {
+			paging=PageRequest.of(pageNumber, pageSize, Sort.by(Sort.Direction.ASC,"id"));
+		}
+		return codeMaintenanceFileRepository.findByCodeStandard(codeStandard,paging);
+	}
+-------------------
+	Page<CodeMaintenanceFile> findByProcessedState(String processedState, Pageable paging);
+
+	Page<CodeMaintenanceFile> findByCodeStandard(String codeStandard, Pageable paging);
+0-------------------------------
+
+public Page<CodeMaintenanceFile> getCodeStandardFileList(String processedState, String codeStandard, int pageSize,
+			int pageNumber, String sortBy, String sortOrder) {
+		
+		Pageable paging = PageRequest.of(pageNumber, pageSize);
+		// TODO Auto-generated method stub
+
+		if (sortOrder.equalsIgnoreCase("DESC")) {
+
+			paging = PageRequest.of(pageNumber, pageSize, Sort.by(Sort.Direction.DESC, "id"));
+		} else {
+			paging = PageRequest.of(pageNumber, pageSize, Sort.by(Sort.Direction.ASC, "id"));
+		}
+
+//		List<CodeMaintenanceFile> fileList = codeMaintenanceFileRepository
+//				.findByCodeStandardAndProcessedState(processedState, codeStandard);
+
+		codeMaintenanceFileRepository
+				.findByCodeStandardAndProcessedState(processedState, codeStandard);
+		
+		/*
+		 * Page<CodeMaintenanceFile> pagedResult = new PageImpl<>(
+		 * fileList.subList(Math.min(pageNumber * pageSize, fileList.size()),
+		 * Math.min((pageNumber + 1) * pageSize, fileList.size())), paging,
+		 * fileList.size());
+		 */
+		// return pagedResult;
+	}
+
+------------------------
+  IF  code_standard='All' AND processed_state=('All' or 'Uploaded'or 'Pending For Verification','Verification Rejected',
+  'Verified', 'Synced') THEN
+  SELECT * FROM coding_standard_files ex WHERE ex.processed_state=processed_state;
+END IF;
+
+
+
+------------------------------------
+
+List api::
+1)
+
+	@GetMapping("/codestandardfile/list")
+	public ResponseEntity<Page<CodeMaintenanceFile>> getCodeStandardFileList(@RequestParam String processedState,
+			@RequestParam String codeStandard,
+			@RequestParam int pageSize,
+			@RequestParam int pageNumber,
+			@RequestParam(value = "sortBy", required = false, defaultValue = "Newest First") String sortBy,
+			@RequestParam(value = "sortOrder", required = false, defaultValue = "DESC") String sortOrder) {
+
+		Page<CodeMaintenanceFile> codeMaintenanceFiles = codeMaintenanceFileService
+				.getCodeStandardFileList(processedState, codeStandard, pageSize, pageNumber, sortBy, sortOrder);
+		HttpHeaders headers = new HttpHeaders();
+		return new ResponseEntity<>(codeMaintenanceFiles, headers, HttpStatus.OK);
+	}
+2)
+public Page<CodeMaintenanceFile> getCodeStandardFileList(String processedState, String codeStandard, int pageSize,
+			int pageNumber, String sortBy, String sortOrder) {
+
+		Pageable paging = PageRequest.of(pageNumber, pageSize);
+		// TODO Auto-generated method stub
+
+		if (sortOrder.equalsIgnoreCase("DESC")) {
+
+			paging = PageRequest.of(pageNumber, pageSize, Sort.by(Sort.Direction.DESC, "id"));
+		} else {
+			paging = PageRequest.of(pageNumber, pageSize, Sort.by(Sort.Direction.ASC, "id"));
+		}
+		
+		List<CodeMaintenanceFile> fileList = codeMaintenanceFileRepository
+				.findByCodeStandardAndProcessedState(processedState, codeStandard);
+
+		Page<CodeMaintenanceFile> pagedResult = new PageImpl<>(
+				fileList.subList(Math.min(pageNumber * pageSize, fileList.size()),
+						Math.min((pageNumber + 1) * pageSize, fileList.size())),
+				paging, fileList.size());
+		
+		return pagedResult;
+
+	}
+3)
+@Repository
+public interface CodeMaintenanceFileRepository extends JpaRepository<CodeMaintenanceFile, Integer> {
+
+	@Query(value = "CALL GetCodeMaintenanceList (:processed_state, :code_standard)", nativeQuery = true)
+	List<CodeMaintenanceFile> findByCodeStandardAndProcessedState(String processed_state, String code_standard);
+}
+
+====================================================================================================================================
+Date:21/11/2023:
+----------------
+CREATE DEFINER=`root`@`localhost` PROCEDURE `GetVerificationStatus`(
+    IN in_verification_type VARCHAR(100),
+    IN in_code_standard VARCHAR(100),
+    IN in_release_date DATE
+)
+BEGIN
+    DECLARE result_message VARCHAR(10);
+    DECLARE my_id int;
+    SET result_message = 'Success';
+    SET my_id=0;
+    IF in_verification_type = 'version-validation' THEN
+        IF EXISTS (SELECT 1 FROM coding_standard_files WHERE code_standard = in_code_standard AND
+        processed_state="Synced" AND release_date >= in_release_date AND active=1) THEN
+            SET result_message = 'Failed';
+ --       ELSEIF (SELECT 1 FROM coding_standard_files WHERE code_standard = in_code_standard AND processed_state="pending for verification" AND release_date >= in_release_date AND active=1) THEN
+ --           SET result_message = 'Failed';
+        END IF;
+     ELSEIF in_verification_type = 'checking-inprocessfiles' THEN
+        IF EXISTS(SELECT 1 FROM coding_standard_files WHERE code_standard=in_code_standard AND 
+        processed_state="pending for verification" ) THEN
+           SET result_message = 'Failed';
+           SET my_id=(SELECT id FROM coding_standard_files WHERE code_standard=in_code_standard AND
+           processed_state="pending for verification" );
+        END IF;
+    ELSE
+        SET result_message = 'No matching condition found';
+    END IF;
+    SELECT my_id AS id, result_message AS 'message';
+END
+--------------------------------
+
+CREATE DEFINER=`root`@`localhost` PROCEDURE `GetVerificationStatus`(
+    IN in_verification_type VARCHAR(100),
+    IN in_code_standard VARCHAR(100),
+    IN in_release_date DATE
+)
+BEGIN
+    SELECT *
+    FROM coding_standard_files ex
+    WHERE
+        (processed_state = 'All' OR ex.processed_state = processed_state)
+        AND (code_standard = 'All' OR ex.code_standard = code_standard OR 'All' IN (ex.code_standard, code_standard))    
+    --  AND (code_standard = 'All' OR ex.code_standard = code_standard)
+   --    AND ex.code_standard IN ('allergies', 'medicine', 'pharmacy', 'icd', 'cpt')
+    ORDER BY ex.id DESC;
+END
+
+
+			(OOOOOOOOORRRRRRRRRRR)
+
+BEGIN
+    IF processed_state = 'All' AND code_standard = 'All' THEN
+        SELECT * FROM coding_standard_files ex WHERE ex.code_standard IN ('allergies', 'medicine', 'pharmacy', 'icd', 'cpt') ORDER BY ex.id DESC;
+    ELSEIF processed_state = 'All' AND code_standard IN ('allergies', 'medicine', 'pharmacy', 'icd', 'cpt') THEN
+        SELECT * FROM coding_standard_files ex WHERE ex.code_standard = code_standard ORDER BY ex.id DESC;
+    ELSEIF processed_state = 'Uploaded' THEN
+        SELECT * FROM coding_standard_files ex WHERE (ex.processed_state = processed_state AND ex.code_standard = code_standard) OR code_standard = 'All' ORDER BY ex.id DESC;
+    ELSEIF processed_state = 'Pending For Verification' THEN
+        SELECT * FROM coding_standard_files ex WHERE (ex.processed_state = processed_state AND ex.code_standard = code_standard) OR code_standard = 'All' ORDER BY ex.id DESC;
+    ELSEIF processed_state = 'Verification Rejected' THEN
+        SELECT * FROM coding_standard_files ex WHERE (ex.processed_state = processed_state AND ex.code_standard = code_standard) OR code_standard = 'All' ORDER BY ex.id DESC;
+    ELSEIF processed_state = 'Verified' THEN
+        SELECT * FROM coding_standard_files ex WHERE (ex.processed_state = processed_state AND ex.code_standard = code_standard) OR code_standard = 'All' ORDER BY ex.id DESC;
+    ELSEIF processed_state = 'Synced' THEN
+        SELECT * FROM coding_standard_files ex WHERE (ex.processed_state = processed_state AND ex.code_standard = code_standard) OR code_standard = 'All' ORDER BY ex.id DESC;
+	END IF;
+ --   IF code_standard = 'All' AND processed_state IN ('Uploaded', 'Pending For Verification', 'Verification Rejected', 'Verified', 'Synced') THEN
+ --   SELECT * FROM coding_standard_files ex WHERE ex.processed_state = processed_state  ORDER BY ex.id DESC;
+ --   END IF;
+   END
+
+-------------------------------------------------------------
+
+Date:21/11/2023:
+===============
+
+
+
