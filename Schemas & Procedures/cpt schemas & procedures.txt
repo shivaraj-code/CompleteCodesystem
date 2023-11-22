@@ -1,0 +1,297 @@
+Schemas for CPT:
+=================
+1)cptnew:
+---------
+CREATE TABLE `cptnew` (
+  `id` int NOT NULL AUTO_INCREMENT,
+  `code` varchar(45) DEFAULT NULL,
+  `short_desc` varchar(255) DEFAULT NULL,
+  `medium_desc` varchar(512) DEFAULT NULL,
+  `long_desc` longtext,
+  `version_state` varchar(45) DEFAULT NULL,
+  `ref_id` int DEFAULT NULL,
+  `original_ref_id` int DEFAULT NULL,
+  `file_id` int DEFAULT NULL,
+  `data_source` varchar(100) DEFAULT NULL,
+  `created_by` int DEFAULT '2',
+  `modified_by` int DEFAULT '2',
+  `modified_date` timestamp NULL DEFAULT NULL,
+  `created_date` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
+  `status` varchar(5) DEFAULT 'Y',
+  `sync_status` varchar(45) DEFAULT NULL,
+  PRIMARY KEY (`id`),
+  KEY `idx_code` (`code`)
+) ENGINE=InnoDB AUTO_INCREMENT=16384 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci
+
+2)cpt_data_verification:
+------------------------
+
+CREATE TABLE `cpt_data_verification` (
+  `id` int NOT NULL AUTO_INCREMENT,
+  `code` varchar(45) DEFAULT NULL,
+  `short_desc` varchar(255) DEFAULT NULL,
+  `medium_desc` varchar(512) DEFAULT NULL,
+  `long_desc` longtext,
+  `file_id` int DEFAULT NULL,
+  `inserted_date` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
+  `status` varchar(45) DEFAULT NULL,
+  `verification_state` varchar(45) DEFAULT NULL,
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB AUTO_INCREMENT=16384 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci
+
+3)cpt_standard_versions:
+------------------------
+CREATE TABLE `cpt_standard_versions` (
+  `id` int NOT NULL AUTO_INCREMENT,
+  `code` varchar(45) DEFAULT NULL,
+  `short_desc` varchar(255) DEFAULT NULL,
+  `medium_desc` varchar(512) DEFAULT NULL,
+  `long_desc` longtext,
+  PRIMARY KEY (`id`),
+  KEY `index_code` (`code`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci
+
+
+Stored Procedures for CPT:
+=========================
+
+1)CptCompareAndSyncAdded:
+-------------------------
+CREATE DEFINER=`dv_cs_db_admin`@`localhost` PROCEDURE `CptCompareAndSyncAdded`(IN file_id INT,
+IN file_name varChar(100),
+IN user_id INT
+)
+BEGIN
+DECLARE added_records INT DEFAULT 0;
+    -- Step 0:backup current table
+     CALL create_cptnew_backup_table();
+ -- Step 1: (Add) Insert new codes from cpt_standard_versions into cptnew
+    INSERT INTO cptnew (code,short_desc, medium_desc, long_desc,
+    file_id,created_by,modified_by,data_source,version_state,status,sync_status)
+    SELECT dump.code,dump.short_desc,dump.medium_desc,dump.long_desc,
+   file_id,user_id,user_id,file_name,'Validated','Y','Added'
+    FROM cpt_standard_versions dump
+    LEFT JOIN cptnew ex on ex.code=dump.code
+    where ex.code is null;
+     -- Update the updated_records count
+        SET added_records = ROW_COUNT();
+	-- Updating RefId, Original_refid for newly inserting Records
+    UPDATE cptnew SET original_ref_id = id  WHERE  original_ref_id IS NULL;
+    -- Deleting previous result based on fileid
+   -- delete from cpt_sync_data_result where file_id=file_id and status='Post Sync';
+   delete from code_change_counts where file_id=file_id and status='Post Sync';
+   -- INSERT INTO cpt_sync_data_result (file_id,added_records,updated_records,deleted_records,status)
+   INSERT INTO code_change_counts (file_id,added_records,status,user_id)
+   SELECT file_id,added_records,'Post Sync',user_id;
+   SELECT 1 as id, added_records as added_records, 0 as updated_records , 0 as deleted_records,'success' status;
+END
+
+2)CptCompareAndSyncDeleted:
+---------------------------
+CREATE DEFINER=`dv_cs_db_admin`@`localhost` PROCEDURE `CptCompareAndSyncDeleted`(IN file_id INT,
+IN file_name varChar(100),
+IN user_id INT)
+BEGIN
+DECLARE deleted_records INT DEFAULT 0;
+       -- Step 4: (Delete) Update status for codes not in cpt_standard_versions but in cptnew
+    UPDATE cptnew ex
+    left JOIN cpt_standard_versions dump ON dump.code = ex.code
+    SET ex.version_state='InValidated', ex.modified_date=now(), ex.file_id=file_id, ex.modified_by=user_id
+    where dump.code is null  and ex.status ='Y'  and ex.version_state='Validated';
+    -- step 5:(Delete) Insert the deleted codes change status 'N'
+    INSERT INTO cptnew (code,short_desc,medium_desc,long_desc,
+    file_id,created_by,modified_by,data_source,version_state,status,sync_status)
+    SELECT ex.code,ex.short_desc,ex.medium_desc,ex.long_desc,
+    file_id,user_id,user_id,file_name,'Validated','N','Deleted'
+    FROM cptnew ex
+    left JOIN cpt_standard_versions dump ON dump.code = ex.code
+    where dump.code is null;
+    -- Update the deleted_records count
+    SET deleted_records = ROW_COUNT();
+    -- Return the record counts
+   UPDATE code_change_counts SET deleted_records = deleted_records WHERE file_id = file_id AND status = "Post Sync";
+    -- Return success status
+    SELECT 0 AS id, 0 AS added_records, 0 AS updated_records, deleted_records AS deleted_records, 'Post Sync' AS status;
+    END
+
+3)CptCompareAndSyncUpdated:
+---------------------------
+CREATE DEFINER=`dv_cs_db_admin`@`localhost` PROCEDURE `CptCompareAndSyncUpdated`(IN file_id INT,
+    IN file_name VARCHAR(100),
+    IN user_id INT)
+BEGIN
+    DECLARE batch_size INT DEFAULT 20000;
+    DECLARE start_index INT DEFAULT 0;
+    DECLARE end_index INT;
+    DECLARE total_records INT;
+    DECLARE updated_records INT DEFAULT 0;
+    -- Get the total number of records in the cpt table
+    SELECT COUNT(*) INTO total_records FROM cptnew;
+    WHILE start_index < total_records DO
+        -- Calculate the end index for the current batch
+        SET end_index = start_index + batch_size;
+        -- Step 1: Your existing update logic
+        UPDATE cptnew ex
+        INNER JOIN cpt_standard_versions dump ON dump.code = ex.code
+        SET ex.version_state = 'TValid', ex.modified_date = NOW(),
+            ex.file_id = file_id, ex.modified_by = user_id
+        WHERE
+     ((ex.status ='Y' AND ex.version_state='Validated') AND
+            (ex.short_desc != dump.short_desc
+            OR ex.medium_desc !=dump.medium_desc
+            OR ex.long_desc != dump.long_desc))
+            OR (ex.version_state = 'Validated' AND ex.status='N');
+        -- Get the count of updated records in this batch
+        SET updated_records = updated_records + ROW_COUNT();
+        -- Insert changed records as new records in the existing table
+        INSERT INTO cptnew(code, short_desc, medium_desc,long_desc, file_id, created_by, modified_by, data_source, version_state, status, ref_id, original_ref_id, sync_status)
+        SELECT DISTINCT dump.code, dump.short_desc, dump.medium_desc, dump.long_desc,
+            file_id, user_id, user_id, file_name, 'Validated', 'Y', ex.id, ex.original_ref_id, 'Updated'
+        FROM cpt_standard_versions dump
+        INNER JOIN cptnew ex ON ex.code = dump.code
+        WHERE ex.version_state = 'TValid';
+        -- Update the batch's start_index for the next iteration
+        SET start_index = end_index;
+    END WHILE;
+    -- Updating RefId, Original_refid for newly inserting Records
+   -- UPDATE cpt SET ref_id = id, original_ref_id = id WHERE ref_id IS NULL;
+    -- Update code_change_counts with the total updated_records count
+    UPDATE code_change_counts SET updated_records = updated_records, user_id = user_id WHERE file_id = file_id AND status = 'Post Sync';
+    -- Return success status
+    SELECT 1 AS id, 0 AS added_records, updated_records AS updated_records, 0 AS deleted_records, 'success' AS status;
+END
+
+4)PrepareCptDataForVerification:
+--------------------------------
+CREATE DEFINER=`dv_cs_db_admin`@`localhost` PROCEDURE `PrepareCptDataForVerification`(IN file_id INT,
+IN file_name varChar(100),
+IN user_id INT
+)
+BEGIN
+      DECLARE added_records INT DEFAULT 0;
+      DECLARE updated_records INT DEFAULT 0;
+      DECLARE deleted_records INT DEFAULT 0;
+   -- Step 1: (Add) Insert new codes from cpt_standard_versions into cpt
+    Truncate Table cpt_data_verification;
+    INSERT INTO cpt_data_verification(code, short_desc, medium_desc, long_desc,
+    file_id,status,verification_state)
+   SELECT dump.code,dump.short_desc,dump.medium_desc,dump.long_desc,
+   file_id,'Added',NULL
+   FROM cpt_standard_versions dump
+    LEFT JOIN cptnew ex on ex.code=dump.code
+    where ex.code is null;
+    set added_records=ROW_COUNT();
+  -- step2 Inserting change records as new records in existing table
+    INSERT INTO cpt_data_verification (code,short_desc, medium_desc, long_desc,
+    file_id,status,verification_statE)
+    SELECT dump.code,dump.short_desc,dump.medium_desc,dump.long_desc,
+    file_id,'Updated',NULL
+    FROM cpt_standard_versions dump
+    INNER JOIN cptnew ex on ex.code=dump.code
+   
+     --   (ex.short_name != dump.short_name
+       
+        -- OR ex.description != dump.long_desc)
+      --  and ex.status ='Y' and ex.version_state='Validated';
+      WHERE
+      
+       ((ex.status ='Y' and ex.version_state='Validated') and
+         (ex.short_desc != dump.short_desc
+         OR ex.medium_desc !=dump.medium_desc
+         OR ex.long_desc != dump.long_desc)) 
+		or (ex.status ='N' and ex.version_state='Validated');
+    set updated_records=ROW_COUNT();
+   -- Step 3: (Delete) Update status for codes not in cpt_standard_versions but in cpt
+   INSERT INTO cpt_data_verification (code,short_desc, medium_desc, long_desc,
+    file_id,status,verification_statE)
+   SELECT ex.code,ex.short_desc,ex.medium_desc,ex.long_desc,
+    file_id,'Deleted',NULL
+	 FROM cptnew ex
+     LEFT JOIN cpt_standard_versions dump on ex.code=dump.code
+     where dump.code is null  and ex.status ='Y' and ex.version_state='Validated';
+     set deleted_records=ROW_COUNT();
+    -- Deleting previous result based on fileid
+   -- delete from cpt_sync_data_result where file_id=file_id and status='Pre Sync';
+   delete from code_change_counts where file_id=file_id and status='Pre Sync';
+   -- Insert summary counts
+   -- INSERT INTO cpt_sync_data_result (file_id,added_records,updated_records,deleted_records,status)
+   INSERT INTO code_change_counts (file_id,added_records,updated_records,deleted_records,status,user_id)
+   SELECT file_id,added_records,updated_records,deleted_records,'Pre Sync',user_id;
+     select 1;
+END
+
+5)GetCptCodeVerificationDetails:
+--------------------------------
+CREATE DEFINER=`dv_cs_db_admin`@`localhost` PROCEDURE `GetCptCodeVerificationDetails`(
+    IN fileid INT,
+    IN searchterm VARCHAR(255),
+    IN status VARCHAR(50)
+)
+BEGIN
+    SELECT * FROM cpt_data_verification vr
+     WHERE vr.file_id = fileid
+      AND (searchterm = '' OR searchterm IS NULL
+           OR vr.code LIKE CONCAT('%', searchterm, '%')
+           OR vr.short_desc LIKE CONCAT('%', searchterm, '%')
+           OR vr.medium_desc LIKE CONCAT('%',searchterm,'%')
+           OR vr.long_desc LIKE CONCAT('%', searchterm, '%')
+          )
+      AND (status = '' OR status IS NULL OR vr.status = status);
+END
+
+
+6)GetCptAfterSyncDetails:
+-------------------------
+CREATE DEFINER=`dv_cs_db_admin`@`localhost` PROCEDURE `GetCptAfterSyncDetails`(
+    IN fileid INT,
+    IN searchterm VARCHAR(255),
+    IN status VARCHAR(50)
+)
+BEGIN
+    SELECT * FROM cptnew cn
+     WHERE cn.file_id = fileid
+      AND (searchterm = '' OR searchterm IS NULL
+           OR cn.code LIKE CONCAT('%', searchterm, '%')
+           OR cn.short_desc LIKE CONCAT('%', searchterm, '%')
+           OR cn.medium_desc LIKE CONCAT('%',searchterm,'%')
+           OR cn.long_desc LIKE CONCAT('%', searchterm, '%')
+          )
+      AND (sync_status = '' OR sync_status IS NULL OR cn.sync_status = sync_status);
+END
+
+
+7)GetCptPostSyncData:
+---------------------
+CREATE DEFINER=`dv_cs_db_admin`@`localhost` PROCEDURE `GetCptPostSyncData`(
+IN file_id int,
+IN status varChar(100)
+)
+BEGIN
+IF status = 'All' THEN
+SELECT * FROM cptnew ex WHERE file_id=ex.file_id and version_state="Validated";
+ELSEIF status = 'Added' THEN
+SELECT * FROM cptnew ex WHERE file_id=ex.file_id and sync_status='Added';
+ELSEIF status = 'Updated' THEN
+SELECT * FROM cptnew ex WHERE file_id=ex.file_id and sync_status='Updated';
+ELSEIF status = 'Deleted' THEN
+SELECT * FROM cptnew ex WHERE file_id=ex.file_id and sync_status='Deleted';
+END IF;
+END
+
+
+8)create_cptnew_backup_table:
+-----------------------------
+CREATE DEFINER=`dv_cs_db_admin`@`localhost` PROCEDURE `create_cptnew_backup_table`()
+BEGIN
+    DECLARE current_date_str VARCHAR(14);
+    SET current_date_str = DATE_FORMAT(NOW(), '%d%m%Y%H%i');
+    SET @sql = CONCAT('CREATE TABLE cptnew_', current_date_str, ' LIKE cptnew;');
+    PREPARE stmt FROM @sql;
+    EXECUTE stmt;
+    DEALLOCATE PREPARE stmt;
+    SET @sql = CONCAT('INSERT INTO cptnew_', current_date_str, ' SELECT * FROM cptnew;');
+    PREPARE stmt FROM @sql;
+    EXECUTE stmt;
+    DEALLOCATE PREPARE stmt;
+END
+

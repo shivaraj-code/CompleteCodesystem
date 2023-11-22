@@ -1,0 +1,55 @@
+1)GetCodeMaintenanceList:
+========================
+
+CREATE DEFINER=`root`@`localhost` PROCEDURE `GetCodeMaintenanceList`(
+  IN processed_state VARCHAR(100),
+    IN code_standard VARCHAR(45)
+)
+BEGIN
+    SELECT *
+    FROM coding_standard_files ex
+    WHERE
+        (processed_state = 'All' OR ex.processed_state = processed_state)
+        AND (code_standard = 'All' OR ex.code_standard = code_standard OR 'All' IN (ex.code_standard, code_standard))
+     --   AND (code_standard = 'All' OR ex.code_standard = code_standard)
+   --    AND ex.code_standard IN ('allergies', 'medicine', 'pharmacy', 'icd', 'cpt')
+    ORDER BY ex.id DESC;
+END
+
+----------
+2)GetVerificationStatus:
+========================
+
+CREATE DEFINER=`root`@`localhost` PROCEDURE `GetVerificationStatus`(
+  IN in_verification_type VARCHAR(100),
+    IN in_code_standard VARCHAR(100),
+    IN in_release_date DATE
+)
+BEGIN
+    DECLARE result_message VARCHAR(10);
+    DECLARE my_id int;
+    SET result_message = 'Success';
+    SET my_id=0;
+    
+    IF in_verification_type = 'version-validation' THEN
+        IF EXISTS (SELECT 1 FROM coding_standard_files WHERE code_standard = in_code_standard AND processed_state="Synced" AND release_date >= in_release_date AND active=1) THEN
+            SET result_message = 'Failed';
+		 ELSEIF(SELECT 1 FROM coding_standard_files WHERE code_standard=in_code_standard AND processed_state="Verified" AND active=1) THEN
+        SET result_message = 'Aborted';
+ 
+ --  ELSEIF (SELECT 1 FROM coding_standard_files WHERE code_standard = in_code_standard AND processed_state="pending for verification" AND release_date >= in_release_date AND active=1) THEN
+ --  SET result_message = 'Failed';
+       END IF;
+     ELSEIF in_verification_type = 'checking-inprocessfiles' THEN
+        IF EXISTS(SELECT 1 FROM coding_standard_files WHERE code_standard=in_code_standard AND processed_state="pending for verification" ) THEN
+            SET result_message = 'Failed';
+			SET my_id=(SELECT id FROM coding_standard_files WHERE code_standard=in_code_standard AND processed_state="pending for verification" );
+
+       END IF;
+    ELSE
+        SET result_message = 'No matching condition found';
+    END IF;    
+    
+    SELECT my_id AS id, result_message AS 'message';
+    
+END

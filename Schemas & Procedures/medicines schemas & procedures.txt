@@ -1,0 +1,340 @@
+Schemas for Medicines:
+=======================
+1)medicines_new:
+---------------
+CREATE TABLE `medicines_new` (
+  `ai_id` int NOT NULL AUTO_INCREMENT,
+  `id` int DEFAULT NULL,
+  `ndc` varchar(45) DEFAULT NULL,
+  `name` text,
+  `dea` int DEFAULT NULL,
+  `obsdtec` varchar(45) DEFAULT NULL,
+  `repack` int DEFAULT NULL,
+  `is_compounded` varchar(45) DEFAULT NULL,
+  `data_source` varchar(245) DEFAULT NULL,
+  `version_state` varchar(45) DEFAULT 'Validated',
+  `status` varchar(5) DEFAULT 'Y',
+  `is_controlled_substance` tinyint DEFAULT '0',
+  `ref_id` int DEFAULT NULL,
+  `original_ref_id` int DEFAULT NULL,
+  `created_by` int DEFAULT NULL,
+  `created_date` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
+  `modified_by` int DEFAULT NULL,
+  `modified_date` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
+  `file_id` int DEFAULT NULL,
+  `sync_status` varchar(45) DEFAULT NULL,
+  PRIMARY KEY (`ai_id`),
+  KEY `idx_ndc` (`ndc`),
+  KEY `idx_id` (`id`)
+) ENGINE=InnoDB AUTO_INCREMENT=200700 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci
+
+
+2)medicines_data_verification:
+------------------------------
+CREATE TABLE `medicines_data_verification` (
+  `ai_id` int NOT NULL AUTO_INCREMENT,
+  `id` int DEFAULT NULL,
+  `ndc` varchar(45) DEFAULT NULL,
+  `name` text,
+  `dea` int DEFAULT NULL,
+  `obsdtec` varchar(45) DEFAULT NULL,
+  `repack` int DEFAULT NULL,
+  `is_compounded` varchar(45) DEFAULT NULL,
+  `file_id` int DEFAULT NULL,
+  `inserted_date` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
+  `status` varchar(45) DEFAULT NULL,
+  `verification_state` varchar(45) DEFAULT NULL,
+  PRIMARY KEY (`ai_id`)
+) ENGINE=InnoDB AUTO_INCREMENT=6143 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci
+
+
+3)Medicines_standard_versions:
+------------------------------
+CREATE TABLE `medicines_standard_versions` (
+  `ai_id` int NOT NULL AUTO_INCREMENT,
+  `id` int DEFAULT NULL,
+  `ndc` varchar(45) DEFAULT NULL,
+  `name` text,
+  `dea` int DEFAULT NULL,
+  `obsdtec` varchar(45) DEFAULT NULL,
+  `repack` int DEFAULT NULL,
+  `is_compounded` varchar(45) DEFAULT NULL,
+  PRIMARY KEY (`ai_id`),
+  KEY `idx_dea` (`dea`),
+  KEY `idx_ndc` (`ndc`),
+  KEY `idx_id` (`id`),
+  KEY `idx_name` (`name`(256)),
+  KEY `idx_obsdtec` (`obsdtec`),
+  KEY `idx_repack` (`repack`)
+) ENGINE=InnoDB AUTO_INCREMENT=177659 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci
+
+
+Procedures for Medicines:
+============================
+1)AddedMedicineSynchProcedure:
+------------------------------
+CREATE DEFINER=`root`@`localhost` PROCEDURE `AddedMedicineSynchProcedure`(IN file_id INT,
+IN file_name varChar(100),
+IN user_id INT
+)
+BEGIN
+DECLARE added_records INT DEFAULT 0;
+
+    -- Step 0:backup current table
+     CALL create_medicines_backup_table();
+ -- Step 1: (Add) Insert new codes from medicines_standard_versions into medicines
+    INSERT INTO medicines_new (id, ndc, name, dea, obsdtec, repack, is_compounded,
+    file_id,created_by,modified_by,data_source,version_state,status,sync_status)
+    SELECT dump.id,dump.ndc,dump.name,dump.dea,dump.obsdtec,dump.repack,dump.is_compounded,
+   file_id,user_id,user_id,file_name,'Validated','Y','Added'
+    FROM medicines_standard_versions dump
+    LEFT JOIN medicines_new ex on ex.ndc=dump.ndc and ex.id=dump.id
+    where ex.ndc is null;
+     -- Update the updated_records count
+        SET added_records = ROW_COUNT();
+	-- Updating RefId, Original_refid for newly inserting Records
+    UPDATE medicines_new SET original_ref_id = ai_id  WHERE  ref_id IS NULL;
+     -- Deleting previous result based on fileid
+   delete from code_change_counts where file_id=file_id and status='Post Sync';
+   -- INSERT INTO cpt_sync_data_result (file_id,added_records,updated_records,deleted_records,status)
+   INSERT INTO code_change_counts (file_id,added_records,status,user_id)
+   SELECT file_id,added_records,'Post Sync',user_id;
+   SELECT 1 as id, 0 as added_records, 0 as updated_records , 0 as deleted_records,'success' status;
+END
+
+2)DeletedMedicineSynchProcedure:
+--------------------------------
+CREATE DEFINER=`root`@`localhost` PROCEDURE `DeletedMedicineSynchProcedure`(IN file_id INT,
+IN file_name varChar(100),
+IN user_id INT)
+BEGIN
+DECLARE deleted_records INT DEFAULT 0;
+       -- Step 4: (Delete) Update status for codes not in cpt_standard_versions but in cptnew
+    UPDATE medicines_new ex
+    left JOIN medicines_standard_versions dump ON dump.ndc = ex.ndc and dump.id =ex.id
+    SET ex.version_state='InValidated', ex.modified_date=now(), ex.file_id=file_id, ex.modified_by=user_id
+    where dump.ndc is null  and ex.status ='Y'  and ex.version_state='Validated';
+    -- step 5:(Delete) Insert the deleted codes change status 'N'
+    INSERT INTO medicines_new (id, ndc, name, dea, obsdtec, repack, is_compounded,
+    file_id,created_by,modified_by,data_source,version_state,status,sync_status)
+    SELECT  ex.id,ex.ndc,ex.name,ex.dea,ex.obsdtec,ex.repack,ex.is_compounded,
+    file_id,user_id,user_id,file_name,'Validated','N','Deleted'
+    FROM medicines_new ex
+    left JOIN medicines_standard_versions dump ON dump.ndc = ex.ndc and dump.id =ex.id
+    where dump.ndc is null;
+    -- Update the deleted_records count
+    SET deleted_records = ROW_COUNT();
+    -- Return the record counts
+   UPDATE code_change_counts SET deleted_records = deleted_records WHERE file_id = file_id AND status = "Post Sync";
+    -- Return success status
+    SELECT 0 AS id, 0 AS added_records, 0 AS updated_records, deleted_records AS deleted_records, 'Post Sync' AS status;
+    END
+
+3)UpdatedMedicneSynchProcedure_Batch:
+-------------------------------------
+CREATE DEFINER=`root`@`localhost` PROCEDURE `UpdatedMedicneSynchProcedure_Batch`(IN file_id INT,
+    IN file_name VARCHAR(100),
+    IN user_id INT)
+BEGIN
+    DECLARE batch_size INT DEFAULT 20000;
+    DECLARE start_index INT DEFAULT 0;
+    DECLARE end_index INT;
+    DECLARE total_records INT;
+    DECLARE updated_records INT DEFAULT 0;
+    
+    -- Get the total number of records in the cpt table
+    SELECT COUNT(*) INTO total_records FROM medicines_new;
+    WHILE start_index < total_records DO
+        -- Calculate the end index for the current batch
+        SET end_index = start_index + batch_size;
+        -- Step 1: Your existing update logic
+      update medicines_new AS ex
+INNER JOIN medicines_standard_versions AS dump ON dump.ndc = ex.ndc and dump.id=ex.id
+SET ex.version_state = 'TValid', ex.modified_date = NOW(),
+        ex.file_id = file_id, ex.modified_by = user_id
+WHERE ((ex.version_state = 'Validated' and ex.status='Y' ) and( ex.name != dump.name
+        OR ex.dea != dump.dea
+ 	OR ex.obsdtec != dump.obsdtec
+ 	OR ex.repack != dump.repack
+ 	OR ex.is_compounded != dump.is_compounded)) or
+	(ex.version_state = 'Validated' and ex.status='N');
+        -- Get the count of updated records in this batch
+        SET updated_records = updated_records + ROW_COUNT();
+        -- Insert changed records as new records in the existing table
+       insert into medicines_new(id, ndc, name, dea, obsdtec, repack, is_compounded,
+	file_id, created_by, modified_by, data_source, version_state, status, ref_id, original_ref_id, sync_status)
+select distinct dump.id, dump.ndc, dump.name, dump.dea, dump.obsdtec, dump.repack, dump.is_compounded,
+file_id, user_id, user_id, file_name, 'Validated', 'Y', ex.ai_id, ex.original_ref_id, 'Updated' 
+from medicines_standard_versions dump
+inner join medicines_new ex on ex.ndc=dump.ndc and ex.id=dump.id
+where dump.ndc=ex.ndc and ex.version_state="TValid";
+
+update medicines_new set version_state="InValidated" where version_state="TValid";
+        -- Update the batch's start_index for the next iteration
+        SET start_index = end_index;
+    END WHILE;
+  
+    -- Update change_counts with the total updated_records count
+    UPDATE code_change_counts SET updated_records = updated_records, user_id = user_id WHERE file_id = file_id AND status = 'Post Sync';
+    -- Return success status
+    SELECT 1 AS id, 0 as added_records, updated_records AS updated_records, 0 as deleted_records, 'success' AS status;
+END
+
+4)PrepareMedicineDataForVerification:
+-------------------------------------
+CREATE DEFINER=`root`@`localhost` PROCEDURE `PrepareMedicineDataForVerification`(
+IN file_id INT,
+IN file_name varChar(100),
+IN user_id INT
+)
+BEGIN
+      DECLARE added_records INT DEFAULT 0;
+      DECLARE updated_records INT DEFAULT 0;
+      DECLARE deleted_records INT DEFAULT 0;
+      
+   -- Step 1: (Add) Insert new records from medicines_standard_versions into medicines
+    TRUNCATE TABLE medicines_data_verification;
+
+   INSERT INTO medicines_data_verification(id, ndc, name, dea, obsdtec, repack,is_compounded, file_id, status,verification_state)
+	SELECT dump.id, dump.ndc, dump.name, dump.dea, dump.obsdtec, dump.repack, 
+		dump.is_compounded, file_id, 'Added',null
+	FROM medicines_standard_versions dump
+	LEFT JOIN medicines_new ex ON ex.ndc = dump.ndc AND ex.id = dump.id
+	WHERE ex.ndc IS NULL;
+	set added_records=ROW_COUNT();
+    
+  -- step2 Inserting change records as new records in existing table
+
+    INSERT INTO medicines_data_verification (id,ndc,name, dea, obsdtec, repack,is_compounded,file_id,status,verification_state)
+    SELECT dump.id,dump.ndc,dump.name,dump.dea,dump.obsdtec,dump.repack,dump.is_compounded,file_id,'Updated',null
+    FROM medicines_standard_versions dump
+    INNER JOIN medicines_new ex on ex.ndc=dump.ndc and ex.id=dump.id
+    WHERE
+	((ex.status ='Y' and ex.version_state='Validated') and	
+        (ex.name != dump.name
+        OR ex.dea != dump.dea
+        OR ex.obsdtec!=dump.obsdtec
+        OR ex.repack !=dump.repack
+        OR ex.is_compounded !=dump.is_compounded))or (ex.status ='N' and ex.version_state='Validated');
+       SET updated_records = ROW_COUNT();
+        
+   -- Step 3: (Delete) Update status for codes not in medicine_standard_versions but in medicines
+   INSERT INTO medicines_data_verification (id, ndc,name,dea, obsdtec, repack, is_compounded,file_id,status,verification_state)
+   SELECT ex.id,ex.ndc,ex.name,ex.dea,ex.obsdtec,ex.repack,ex.is_compounded,file_id,'Deleted',null
+	 FROM medicines_new ex
+     LEFT JOIN medicines_standard_versions dump on ex.ndc=dump.ndc and ex.id=dump.id
+     where dump.ndc is null and ex.status ='Y'  and ex.version_state='Validated';
+    SET deleted_records = ROW_COUNT();
+     
+     -- Deleting previous result based on fileid
+    DELETE FROM code_change_counts WHERE file_id = file_id AND status = 'Pre Sync';
+    -- Insert summary counts
+    INSERT INTO code_change_counts (file_id, added_records, updated_records, deleted_records, status, user_id)
+    SELECT file_id, added_records, updated_records, deleted_records, 'Pre Sync', user_id;
+    SELECT 1;
+END
+
+5)GetMedicineVerificationDetailsAfterSync:
+-------------------------------------------
+CREATE DEFINER=`root`@`localhost` PROCEDURE `GetMedicineVerificationDetailsAfterSync`(
+    IN fileid int,
+    IN searchterm  varchar(255),
+    IN status varchar(50)
+)
+BEGIN
+    SELECT * FROM medicines_new vr WHERE vr.file_id=fileid
+    AND (searchTerm ='' OR searchTerm IS NULL
+        OR vr.ndc LIKE CONCAT('%', searchterm, '%')
+        OR vr.name LIKE CONCAT('%', searchterm, '%')
+        )
+     AND (sync_status = '' OR sync_status IS NULL OR vr.sync_status = sync_status);
+     
+END
+
+6)GetMedicinePostSyncData:
+--------------------------
+CREATE DEFINER=`root`@`localhost` PROCEDURE `GetMedicinePostSyncData`(
+IN file_id int,
+IN status varChar(100)
+
+)
+BEGIN
+IF status = 'All' THEN
+SELECT * FROM medicines_new ex WHERE file_id=ex.file_id and version_state="Validated";
+ELSEIF status = 'Added' THEN
+SELECT * FROM medicines_new ex WHERE file_id=ex.file_id and sync_status='Added';
+ELSEIF status = 'Updated' THEN
+SELECT * FROM medicines_new ex WHERE file_id=ex.file_id and sync_status='Updated';
+ELSEIF status = 'Deleted' THEN
+SELECT * FROM medicines_new ex WHERE file_id=ex.file_id and sync_status='Deleted';
+END IF;
+
+END
+
+7)GetMedicineVerificationDetails:
+---------------------------------
+CREATE DEFINER=`root`@`localhost` PROCEDURE `GetMedicineVerificationDetails`(
+    IN fileid int,
+    IN searchterm  varchar(255),
+    IN status varchar(50)
+)
+BEGIN
+    SELECT * FROM medicines_data_verification vr WHERE vr.file_id=fileid
+    AND (searchTerm ='' OR searchTerm IS NULL
+        OR vr.ndc LIKE CONCAT('%', searchterm, '%')
+        OR vr.name LIKE CONCAT('%', searchterm, '%')
+        )
+     AND (status='' OR status is null OR vr.status=status);
+     
+END
+
+8)create_medicines_backup_table:
+--------------------------------
+CREATE DEFINER=`root`@`localhost` PROCEDURE `create_medicines_backup_table`()
+BEGIN
+    DECLARE current_date_str VARCHAR(14);
+    SET current_date_str = DATE_FORMAT(NOW(), '%d%m%Y%H%i');
+    SET @sql = CONCAT('CREATE TABLE medicines_new', current_date_str, ' LIKE medicines_new;');
+    PREPARE stmt FROM @sql;
+    EXECUTE stmt;
+    DEALLOCATE PREPARE stmt;
+    SET @sql = CONCAT('INSERT INTO medicines_new', current_date_str, ' SELECT * FROM medicines_new;');
+    PREPARE stmt FROM @sql;
+    EXECUTE stmt;
+    DEALLOCATE PREPARE stmt;
+END
+
+9)GetVerificationStatus:(Common for all the codesystems):
+------------------------=================================
+CREATE DEFINER=`root`@`localhost` PROCEDURE `GetVerificationStatus`(
+    IN in_verification_type VARCHAR(100),
+    IN in_code_standard VARCHAR(100),
+    IN in_release_date DATE
+)
+BEGIN
+    DECLARE result_message VARCHAR(10);
+    DECLARE my_id int;
+    SET result_message = 'Success';
+    SET my_id=0;
+    IF in_verification_type = 'version-validation' THEN
+        IF EXISTS (SELECT 1 FROM coding_standard_files WHERE code_standard = in_code_standard AND
+        processed_state="Synced" AND release_date >= in_release_date AND active=1) THEN
+            SET result_message = 'Failed';
+        END IF;
+     ELSEIF in_verification_type = 'checking-inprocessfiles' THEN
+        IF EXISTS(SELECT 1 FROM coding_standard_files WHERE code_standard=in_code_standard AND 
+        processed_state="pending for verification" ) THEN
+           SET result_message = 'Failed';
+           SET my_id=(SELECT id FROM coding_standard_files WHERE code_standard=in_code_standard AND
+           processed_state="pending for verification" );
+        END IF;
+    ELSE
+        SET result_message = 'No matching condition found';
+    END IF;
+    SELECT my_id AS id, result_message AS 'message';
+END
+
+
+
+
+

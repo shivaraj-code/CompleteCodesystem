@@ -1,0 +1,94 @@
+1)GetAllergiesPostSyncData
+---------------------------
+CREATE DEFINER=`dv_cs_db_admin`@`localhost` PROCEDURE `GetAllergiesPostSyncData`(
+IN file_id int,
+IN status varChar(100)
+)
+BEGIN
+IF status = 'All' THEN
+SELECT * FROM allergies_new ex WHERE ex.file_id=file_id and ex.version_state="Validated";
+ELSEIF status = 'Added' THEN
+SELECT * FROM allergies_new ex WHERE ex.file_id=file_id and ex.sync_status='Added' and ex.version_state="Validated";
+ELSEIF status = 'Updated' THEN
+SELECT * FROM allergies_new ex WHERE ex.file_id=file_id and ex.sync_status='Updated' and ex.version_state="Validated";
+ELSEIF status = 'Deleted' THEN
+SELECT * FROM allergies_new ex WHERE ex.file_id=file_id and ex.sync_status='Deleted' and ex.version_state="Validated";
+END IF;
+END
+
+
+2)GetCptPostSyncData:
+---------------------
+CREATE DEFINER=`dv_cs_db_admin`@`localhost` PROCEDURE `GetCptPostSyncData`(
+IN file_id int,
+IN status varChar(100)
+)
+BEGIN
+IF status = 'All' THEN
+SELECT * FROM cptnew ex WHERE ex.file_id=file_id and ex.version_state="Validated";
+ELSEIF status = 'Added' THEN
+SELECT * FROM cptnew ex WHERE ex.file_id=file_id and ex.sync_status='Added' and ex.version_state="Validated";
+ELSEIF status = 'Updated' THEN
+SELECT * FROM cptnew ex WHERE ex.file_id=file_id and ex.sync_status='Updated' and ex.version_state="Validated";
+ELSEIF status = 'Deleted' THEN
+SELECT * FROM cptnew ex WHERE ex.file_id=file_id and ex.sync_status='Deleted' and ex.version_state="Validated";
+END IF;
+END
+
+3)GetIcdPostSyncData:
+----------------------
+CREATE DEFINER=`dv_cs_db_admin`@`localhost` PROCEDURE `GetIcdPostSyncData`(
+IN file_id int,
+IN status varChar(100)
+)
+BEGIN
+IF status = 'All' THEN
+SELECT * FROM icdnew ex WHERE ex.file_id=file_id and ex.version_state="Validated";
+ELSEIF status = 'Added' THEN
+SELECT * FROM icdnew ex WHERE ex.file_id=file_id and ex.sync_status='Added' and ex.version_state="Validated";
+ELSEIF status = 'Updated' THEN
+SELECT * FROM icdnew ex WHERE ex.file_id=file_id and ex.sync_status='Updated' and ex.version_state="Validated";
+ELSEIF status = 'Deleted' THEN
+SELECT * FROM icdnew ex WHERE ex.file_id=file_id and ex.sync_status='Deleted' and ex.version_state="Validated";
+END IF;
+END
+
+4)GetMedicinePostSyncData:
+--------------------------
+CREATE DEFINER=`dv_cs_db_admin`@`localhost` PROCEDURE `GetMedicinePostSyncData`(
+IN file_id int,
+IN status varChar(100)
+
+)
+BEGIN
+ IF status = 'All' THEN
+SELECT * FROM medicines_new ex WHERE ex.file_id=file_id and ex.version_state="Validated";
+ELSEIF status = 'Added' THEN
+ SELECT * FROM medicines_new ex WHERE ex.file_id=file_id and ex.sync_status='Added' and ex.version_state="Validated";
+ ELSEIF status = 'Updated' THEN
+ SELECT * FROM medicines_new ex WHERE ex.file_id=file_id and ex.sync_status='Updated' and ex.version_state="Validated";
+ ELSEIF status = 'Deleted' THEN
+SELECT * FROM medicines_new ex WHERE ex.file_id=file_id and ex.sync_status='Deleted' and ex.version_state="Validated";
+END IF;
+
+END
+
+5)GetPharmacyPostSyncData:
+--------------------------
+CREATE DEFINER=`dv_cs_db_admin`@`localhost` PROCEDURE `GetPharmacyPostSyncData`(
+IN file_id int,
+IN status varChar(100)
+)
+BEGIN
+IF status = 'All' THEN
+SELECT * FROM pharmacies ex WHERE ex.file_id=file_id and ex.version_state="Validated";
+ELSEIF status = 'Added' THEN
+SELECT * FROM pharmacies ex WHERE ex.file_id=file_id and ex.sync_status='Added' and ex.version_state="Validated";
+ELSEIF status = 'Updated' THEN
+SELECT * FROM pharmacies ex WHERE ex.file_id=file_id and ex.sync_status='Updated' and ex.version_state="Validated";
+ELSEIF status = 'Deleted' THEN
+SELECT * FROM pharmacies ex WHERE ex.file_id=file_id and ex.sync_status='Deleted' and ex.version_state="Validated";
+
+END IF;
+END
+

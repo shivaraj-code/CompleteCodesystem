@@ -1,0 +1,739 @@
+Schemas for Pharmacies:
+=======================
+1)pharmacies:
+-------------
+CREATE TABLE `pharmacies` (
+  `ai_id` int NOT NULL AUTO_INCREMENT,
+  `id` int DEFAULT NULL,
+  `ncpdp_id` varchar(50) DEFAULT NULL,
+  `store_number` text,
+  `reference_number_alt1` text,
+  `reference_number_alt1qualifier` text,
+  `store_name` text,
+  `address_line1` text,
+  `address_line2` text,
+  `city` text,
+  `state` text,
+  `zip` text,
+  `phone_primary` varchar(100) DEFAULT NULL,
+  `fax` varchar(45) DEFAULT NULL,
+  `email` text,
+  `phone_alt1` text,
+  `phone_alt1_qualifier` text,
+  `phone_alt2` text,
+  `phone_alt2_qualifier` text,
+  `phone_alt3` text,
+  `phone_alt3_qualifier` text,
+  `phone_alt4` text,
+  `phone_alt4_qualifier` text,
+  `phone_alt5` text,
+  `phone_alt5_qualifier` text,
+  `active_start_time` text,
+  `active_end_time` text,
+  `service_level` varchar(45) DEFAULT NULL,
+  `partner_account` text,
+  `last_modified_date` text,
+  `twenty_four_hour_flag` text,
+  `cross_street` text,
+  `record_change` text,
+  `old_service_level` varchar(45) DEFAULT NULL,
+  `text_service_level` text,
+  `text_service_level_change` text,
+  `version` text,
+  `npi` varchar(45) DEFAULT NULL,
+  `is_deleted` text,
+  `specialty_type1` text,
+  `specialty_type2` text,
+  `specialty_type3` text,
+  `specialty_type4` text,
+  `type` int DEFAULT NULL,
+  `longitude` varchar(70) DEFAULT NULL,
+  `latitude` varchar(70) DEFAULT NULL,
+  `location` text,
+  `data_source` varchar(45) DEFAULT NULL,
+  `version_state` varchar(45) DEFAULT NULL,
+  `status` varchar(45) DEFAULT NULL,
+  `created_by` varchar(45) DEFAULT NULL,
+  `created_date` datetime DEFAULT NULL,
+  `modified_by` varchar(45) DEFAULT NULL,
+  `original_ref_id` varchar(45) DEFAULT NULL,
+  `ref_id` varchar(45) DEFAULT NULL,
+  `file_id` varchar(45) DEFAULT NULL,
+  `user_id` varchar(45) DEFAULT NULL,
+  `file_name` varchar(45) DEFAULT NULL,
+  `sync_status` varchar(45) DEFAULT NULL,
+  `modified_date` datetime DEFAULT NULL,
+  `inserted_date` datetime DEFAULT NULL,
+  PRIMARY KEY (`ai_id`)
+) ENGINE=InnoDB AUTO_INCREMENT=131071 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci
+
+2)pharmacy_data_verification:
+------------------------------
+CREATE TABLE `pharmacy_data_verification` (
+  `ai_id` int NOT NULL AUTO_INCREMENT,
+  `id` int DEFAULT NULL,
+  `ncpdp_id` varchar(250) DEFAULT NULL,
+  `store_number` varchar(250) DEFAULT NULL,
+  `reference_number_alt1` varchar(250) DEFAULT NULL,
+  `reference_number_alt1qualifier` varchar(250) DEFAULT NULL,
+  `store_name` varchar(250) DEFAULT NULL,
+  `address_line1` varchar(250) DEFAULT NULL,
+  `address_line2` varchar(250) DEFAULT NULL,
+  `city` varchar(250) DEFAULT NULL,
+  `State` varchar(250) DEFAULT NULL,
+  `zip` varchar(250) DEFAULT NULL,
+  `phone_primary` varchar(100) DEFAULT NULL,
+  `fax` varchar(45) DEFAULT NULL,
+  `email` varchar(250) DEFAULT NULL,
+  `phone_alt1` varchar(250) DEFAULT NULL,
+  `phone_alt1_qualifier` varchar(250) DEFAULT NULL,
+  `phone_alt2` varchar(250) DEFAULT NULL,
+  `phone_alt2_qualifier` varchar(250) DEFAULT NULL,
+  `phone_alt3` varchar(250) DEFAULT NULL,
+  `phone_alt3_qualifier` varchar(250) DEFAULT NULL,
+  `phone_alt4` varchar(250) DEFAULT NULL,
+  `phone_alt4_qualifier` varchar(250) DEFAULT NULL,
+  `phone_alt5` varchar(250) DEFAULT NULL,
+  `phone_alt5_qualifier` varchar(250) DEFAULT NULL,
+  `active_start_time` varchar(250) DEFAULT NULL,
+  `active_end_time` varchar(250) DEFAULT NULL,
+  `service_level` varchar(250) DEFAULT NULL,
+  `partner_account` varchar(250) DEFAULT NULL,
+  `last_modified_date` varchar(250) DEFAULT NULL,
+  `twenty_four_hour_flag` varchar(250) DEFAULT NULL,
+  `cross_street` varchar(250) DEFAULT NULL,
+  `record_change` varchar(250) DEFAULT NULL,
+  `old_service_level` varchar(250) DEFAULT NULL,
+  `text_service_level` varchar(250) DEFAULT NULL,
+  `text_service_level_change` varchar(250) DEFAULT NULL,
+  `version` varchar(250) DEFAULT NULL,
+  `npi` varchar(45) DEFAULT NULL,
+  `is_deleted` varchar(250) DEFAULT NULL,
+  `specialty_type1` varchar(250) DEFAULT NULL,
+  `specialty_type2` varchar(250) DEFAULT NULL,
+  `specialty_type3` varchar(250) DEFAULT NULL,
+  `specialty_type4` varchar(250) DEFAULT NULL,
+  `type` int DEFAULT NULL,
+  `longitude` varchar(250) DEFAULT NULL,
+  `latitude` varchar(250) DEFAULT NULL,
+  `location` varchar(250) DEFAULT NULL,
+  `file_id` int DEFAULT NULL,
+  `inserted_date` datetime DEFAULT CURRENT_TIMESTAMP,
+  `status` varchar(45) DEFAULT NULL,
+  `verification_state` varchar(45) DEFAULT NULL,
+  PRIMARY KEY (`ai_id`),
+  FULLTEXT KEY `NCPDPID` (`ncpdp_id`,`store_number`,`store_name`,`address_line1`,`address_line2`,`city`,`State`,`zip`,`phone_primary`,`fax`,`email`)
+) ENGINE=InnoDB AUTO_INCREMENT=131071 DEFAULT CHARSET=utf8mb3
+
+
+3)pharmacy_standard_versions:
+-----------------------------
+CREATE TABLE `pharmacy_standard_versions` (
+  `ai_id` int NOT NULL AUTO_INCREMENT,
+  `id` int DEFAULT NULL,
+  `ncpdp_id` text,
+  `store_number` text,
+  `reference_number_alt1` text,
+  `reference_number_alt1qualifier` text,
+  `store_name` text,
+  `address_line1` text,
+  `address_line2` text,
+  `city` text,
+  `state` text,
+  `zip` text,
+  `phone_primary` text,
+  `fax` text,
+  `email` text,
+  `phone_alt1` text,
+  `phone_alt1_qualifier` text,
+  `phone_alt2` text,
+  `phone_alt2_qualifier` text,
+  `phone_alt3` text,
+  `phone_alt3_qualifier` text,
+  `phone_alt4` text,
+  `phone_alt4_qualifier` text,
+  `phone_alt5` text,
+  `phone_alt5_qualifier` text,
+  `active_start_time` text,
+  `active_end_time` text,
+  `service_level` int DEFAULT NULL,
+  `partner_account` text,
+  `last_modified_date` text,
+  `twenty_four_hour_flag` text,
+  `cross_street` text,
+  `record_change` text,
+  `old_service_level` int DEFAULT NULL,
+  `text_service_level` text,
+  `text_service_level_change` text,
+  `version` text,
+  `npi` text,
+  `is_deleted` text,
+  `specialty_type1` text,
+  `specialty_type2` text,
+  `specialty_type3` text,
+  `specialty_type4` text,
+  `type` int DEFAULT NULL,
+  `longitude` varchar(70) DEFAULT NULL,
+  `latitude` varchar(70) DEFAULT NULL,
+  `location` text,
+  PRIMARY KEY (`ai_id`),
+  KEY `ID` (`id`),
+  FULLTEXT KEY `NCPDPID` (`ncpdp_id`),
+  FULLTEXT KEY `StoreNumber` (`store_number`),
+  FULLTEXT KEY `ReferenceNumberAlt1` (`reference_number_alt1`),
+  FULLTEXT KEY `ReferenceNumberAlt1Qualifier` (`reference_number_alt1qualifier`),
+  FULLTEXT KEY `StoreName` (`store_name`),
+  FULLTEXT KEY `AddressLine1` (`address_line1`),
+  FULLTEXT KEY `AddressLine2` (`address_line2`),
+  FULLTEXT KEY `City` (`city`),
+  FULLTEXT KEY `State` (`state`),
+  FULLTEXT KEY `Zip` (`zip`),
+  FULLTEXT KEY `PhonePrimary` (`phone_primary`),
+  FULLTEXT KEY `Fax` (`fax`),
+  FULLTEXT KEY `Email` (`email`),
+  FULLTEXT KEY `PhoneAlt1` (`phone_alt1`),
+  FULLTEXT KEY `PhoneAlt1Qualifier` (`phone_alt1_qualifier`),
+  FULLTEXT KEY `PhoneAlt2` (`phone_alt2`),
+  FULLTEXT KEY `PhoneAlt2Qualifier` (`phone_alt2_qualifier`),
+  FULLTEXT KEY `PhoneAlt3` (`phone_alt3`),
+  FULLTEXT KEY `PhoneAlt3Qualifier` (`phone_alt3_qualifier`),
+  FULLTEXT KEY `PhoneAlt4` (`phone_alt4`),
+  FULLTEXT KEY `PhoneAlt4Qualifier` (`phone_alt4_qualifier`),
+  FULLTEXT KEY `PhoneAlt5` (`phone_alt5`),
+  FULLTEXT KEY `PhoneAlt5Qualifier` (`phone_alt5_qualifier`),
+  FULLTEXT KEY `ActiveStartTime` (`active_start_time`),
+  FULLTEXT KEY `ActiveEndTime` (`active_end_time`),
+  FULLTEXT KEY `PartnerAccount` (`partner_account`),
+  FULLTEXT KEY `LastModifiedDate` (`last_modified_date`),
+  FULLTEXT KEY `TwentyFourHourFlag` (`twenty_four_hour_flag`),
+  FULLTEXT KEY `CrossStreet` (`cross_street`),
+  FULLTEXT KEY `RecordChange` (`record_change`),
+  FULLTEXT KEY `TextServiceLevel` (`text_service_level`),
+  FULLTEXT KEY `TextServiceLevelChange` (`text_service_level_change`),
+  FULLTEXT KEY `Version` (`version`),
+  FULLTEXT KEY `NPI` (`npi`),
+  FULLTEXT KEY `IsDeleted` (`is_deleted`),
+  FULLTEXT KEY `SpecialtyType1` (`specialty_type1`),
+  FULLTEXT KEY `SpecialtyType2` (`specialty_type2`),
+  FULLTEXT KEY `SpecialtyType3` (`specialty_type3`),
+  FULLTEXT KEY `SpecialtyType4` (`specialty_type4`),
+  FULLTEXT KEY `Location` (`location`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci
+
+
+
+Procedures for Pharmacies:
+==========================
+1)PharmacyCompareAndSyncTablesAdded:
+------------------------------------
+CREATE DEFINER=`dv_cs_db_admin`@`localhost` PROCEDURE `PharmacyCompareAndSyncTablesAdded`(IN file_id INT,
+IN file_name varChar(100),
+IN user_id INT
+)
+BEGIN
+DECLARE added_records INT DEFAULT 0;
+    -- Step 0:backup current table
+     CALL create_Pharmacy_backup_table();
+ -- Step 1: (Add) Insert new codes from pharmacy_standard_versions into pharmacies
+    INSERT INTO pharmacies (id, ncpdp_id, store_number, reference_number_alt1, reference_number_alt1qualifier,
+    store_name, address_line1, address_line2, city, State, zip, phone_primary, fax, email, phone_alt1, phone_alt1_qualifier,
+    phone_alt2, phone_alt2_qualifier, phone_alt3, phone_alt3_qualifier, phone_alt4, phone_alt4_qualifier, phone_alt5, phone_alt5_qualifier,
+    active_start_time, active_end_time, service_level, partner_account, last_modified_date, twenty_four_hour_flag, cross_street, record_change,
+    old_service_level, text_service_level, text_service_level_change, version, npi, is_deleted, specialty_type1,
+    specialty_type2, specialty_type3, specialty_type4, type, longitude, latitude, location,
+    file_id,created_by,modified_by,data_source,version_state,status,sync_status)
+    SELECT dump.id,dump.ncpdp_id, dump.store_number, dump.reference_number_alt1, dump.reference_number_alt1qualifier,
+    dump.store_name, dump.address_line1, dump.address_line2, dump.city, dump.State, dump.zip, dump.phone_primary, dump.fax,
+    dump.email, dump.phone_alt1, dump.phone_alt1_qualifier,
+    dump.phone_alt2, dump.phone_alt2_qualifier, dump.phone_alt3, dump.phone_alt3_qualifier, dump.phone_alt4,
+    dump.phone_alt4_qualifier, dump.phone_alt5, dump.phone_alt5_qualifier,
+    dump.active_start_time, dump.active_end_time, dump.service_level, dump.partner_account, dump.last_modified_date,
+    dump.twenty_four_hour_flag, dump.cross_street, dump.record_change,
+    dump.old_service_level, dump.text_service_level, dump.text_service_level_change, dump.version, dump.npi, dump.is_deleted,
+    dump.specialty_type1, dump.specialty_type2, dump.specialty_type3, dump.specialty_type4, dump.type, dump.longitude, dump.latitude,
+    dump.location,
+   file_id,user_id,user_id,file_name,'Validated','Y','Added'
+    FROM pharmacy_standard_versions dump
+    LEFT JOIN pharmacies ex on ex.ncpdp_id=dump.ncpdp_id
+    where ex.ncpdp_id is null;
+     -- Update the updated_records count
+        SET added_records = ROW_COUNT();
+	-- Updating RefId, Original_refid for newly inserting Records
+    UPDATE pharmacies SET original_ref_id = ai_id WHERE ref_id IS NULL;
+    -- Deleting previous result based on fileid
+   -- delete from icd_sync_data_result where file_id=file_id and status='Post Sync';
+   delete from code_change_counts where file_id=file_id and status='Post Sync';
+   -- INSERT INTO icd_sync_data_result (file_id,added_records,updated_records,deleted_records,status)
+  INSERT INTO code_change_counts SET added_records = added_records, user_id = user_id , file_id = file_id , status = "Post Sync";
+    -- Return success status
+    SELECT   0 AS id, added_records AS added_records, 0 AS updated_records, 0 AS deleted_records, 'success' AS status;
+END
+
+2)PharmacyCompareAndSyncTablesDeleted:
+--------------------------------------
+CREATE DEFINER=`dv_cs_db_admin`@`localhost` PROCEDURE `PharmacyCompareAndSyncTablesDeleted`(IN file_id INT,
+IN file_name varChar(100),
+IN user_id INT
+)
+BEGIN
+DECLARE deleted_records INT DEFAULT 0;
+
+
+update pharmacies ex
+left join pharmacy_standard_versions dump on  ex.ncpdp_id=dump.ncpdp_id and ex.ID=dump.ID
+set ex.version_state='TDelete', ex.modified_date = NOW(),
+        ex.file_id = file_id, ex.modified_by = user_id
+where ex.version_state='Validated' and ex.status='Y' and dump.ncpdp_id is null;
+Insert Into pharmacies(id, ncpdp_id, store_number, reference_number_alt1, reference_number_alt1qualifier, 
+    store_name, address_line1, address_line2, city, state, zip, phone_primary, fax, email, phone_alt1, phone_alt1_qualifier, 
+    phone_alt2, phone_alt2_qualifier, phone_alt3, phone_alt3_qualifier, phone_alt4, phone_alt4_qualifier, phone_alt5, phone_alt5_qualifier, 
+    active_start_time, active_end_time, service_level, partner_account, last_modified_date, twenty_four_hour_flag, cross_street, record_change,
+    old_service_level, text_service_level, text_service_level_change, version, npi, is_deleted, specialty_type1, 
+    specialty_type2, specialty_type3, specialty_type4, type, longitude, latitude, location,
+created_by,data_source,version_state,status,sync_status,file_id, modified_by, created_date )
+select distinct pn.id,pn.ncpdp_id,pn.store_number,pn.reference_number_alt1,pn.reference_number_alt1qualifier,pn.store_name,
+pn.address_line1,pn.address_line2,pn.city,pn.state,pn.zip,pn.phone_primary,pn.fax,pn.email,pn.phone_alt1,pn.phone_alt1_qualifier,
+pn.phone_alt2,pn.phone_alt2_qualifier,pn.phone_alt3,pn.phone_alt3_qualifier,pn.phone_alt4,pn.phone_alt4_qualifier,pn.phone_alt5,
+pn.phone_alt5_qualifier,pn.active_start_time,pn.active_end_time,pn.service_level,pn.partner_account,pn.last_modified_date,
+pn.twenty_four_hour_flag,pn.cross_street,pn.record_change,pn.old_service_level,pn.text_service_level,pn.text_service_level_change,
+pn.version,pn.npi,pn.is_deleted,pn.specialty_type1,pn.specialty_type2,pn.specialty_type3,pn.specialty_type4,pn.type,
+pn.longitude,pn.latitude,pn.location, user_id,file_name,'Validated','N','Deleted', file_id, user_id, now()
+from pharmacies pn
+where pn.version_state='TDelete';
+update pharmacies set version_state='InValidated' where version_state='TDelete'; 
+ SET deleted_records = ROW_COUNT();
+ -- UPDATE pharmacies SET original_ref_id = ai_id WHERE ref_id IS NULL;
+    UPDATE code_change_counts SET deleted_records = deleted_records WHERE file_id = file_id AND status = "Post Sync";
+    -- Return success status
+   SELECT 0 AS id, 0 AS added_records, 0 AS updated_records, deleted_records AS deleted_records, 'Post Sync' AS status;
+END
+
+3)PharmacyCompareAndSyncTablesUpdated:
+--------------------------------------
+CREATE DEFINER=`dv_cs_db_admin`@`localhost` PROCEDURE `PharmacyCompareAndSyncTablesUpdated`(IN file_id INT,
+    IN file_name VARCHAR(100),
+    IN user_id INT)
+BEGIN
+    DECLARE batch_size INT DEFAULT 20000;
+    DECLARE start_index INT DEFAULT 0;
+    DECLARE end_index INT;
+    DECLARE total_records INT;
+    DECLARE updated_records INT DEFAULT 0;
+    -- Get the total number of records in the cpt table
+    SELECT COUNT(*) INTO total_records FROM pharmacies;
+    WHILE start_index < total_records DO
+        -- Calculate the end index for the current batch
+        SET end_index = start_index + batch_size;
+        -- Step 1: Your existing update logic
+      update pharmacies AS ex
+INNER JOIN pharmacy_standard_versions AS dump ON dump.ncpdp_id = ex.ncpdp_id and dump.id=ex.id
+SET ex.version_state = 'TValid', ex.modified_date = NOW(),
+        ex.file_id = file_id, ex.modified_by = user_id
+WHERE ((ex.version_state = 'Validated' and ex.status='Y' ) and( ex.store_number != dump.store_number
+        OR ex.reference_number_alt1 != dump.reference_number_alt1
+        OR ex.reference_number_alt1qualifier != dump.reference_number_alt1qualifier
+        OR ex.store_name != dump.store_name
+        OR ex.address_line1 != dump.address_line1
+        OR ex.address_line2 != dump.address_line2
+        OR ex.city != dump.city
+        OR ex.State != dump.State
+        OR ex.zip != dump.zip
+        OR ex.phone_primary != dump.phone_primary
+        OR ex.fax != dump.fax
+        OR ex.email != dump.email
+        OR ex.phone_alt1 != dump.phone_alt1
+        OR ex.phone_alt1_qualifier != dump.phone_alt1_qualifier
+         OR ex.phone_alt2 != dump.phone_alt2
+          OR ex.phone_alt2_qualifier != dump.phone_alt2_qualifier
+           OR ex.phone_alt3 != dump.phone_alt3
+            OR ex.phone_alt3_qualifier != dump.phone_alt3_qualifier
+             OR ex.phone_alt4 != dump.phone_alt4
+              OR ex.phone_alt4_qualifier != dump.phone_alt4_qualifier
+               OR ex.phone_alt5 != dump.phone_alt5
+                OR ex.phone_alt5_qualifier != dump.phone_alt5_qualifier
+                 OR ex.active_start_time != dump.active_start_time
+                  OR ex.active_end_time != dump.active_end_time
+                   OR ex.service_level != dump.service_level
+                    OR ex.partner_account != dump.partner_account
+                     OR ex.last_modified_date != dump.last_modified_date
+                     OR ex.twenty_four_hour_flag != dump.twenty_four_hour_flag
+                     OR ex.cross_street != dump.cross_street
+                     OR ex.record_change != dump.record_change
+                     OR ex.old_service_level != dump.old_service_level
+                     OR ex.text_service_level != dump.text_service_level
+                     OR ex.text_service_level_change != dump.text_service_level_change
+                     OR ex.version != dump.version
+                       OR ex.npi != dump.npi
+                         OR ex.is_deleted != dump.is_deleted
+                           OR ex.specialty_type1 != dump.specialty_type1
+                             OR ex.specialty_type2 != dump.specialty_type2
+                               OR ex.specialty_type3 != dump.specialty_type3
+                                 OR ex.specialty_type4 != dump.specialty_type4
+                                 OR ex.longitude != dump.longitude
+                                 OR ex.latitude != dump.latitude
+                                 OR ex.location != dump.location
+                                 OR ex.type!=dump.type)) or 
+(ex.version_state = 'Validated' and ex.status='N');
+        -- Get the count of updated records in this batch
+        SET updated_records = updated_records + ROW_COUNT();
+        -- Insert changed records as new records in the existing table
+       insert into pharmacies(id, ncpdp_id, store_number, reference_number_alt1, reference_number_alt1qualifier,
+    store_name, address_line1, address_line2, city, State, zip, phone_primary, fax, email, phone_alt1, phone_alt1_qualifier,
+    phone_alt2, phone_alt2_qualifier, phone_alt3, phone_alt3_qualifier, phone_alt4, phone_alt4_qualifier, phone_alt5, phone_alt5_qualifier,
+    active_start_time, active_end_time, service_level, partner_account, last_modified_date, twenty_four_hour_flag, cross_street, record_change,
+    old_service_level, text_service_level, text_service_level_change, version, npi, is_deleted, specialty_type1,
+    specialty_type2, specialty_type3, specialty_type4, type, longitude, latitude, location,file_id, created_by, modified_by, data_source, version_state, status, ref_id, original_ref_id, sync_status, user_id)
+select distinct dump.id,dump.ncpdp_id, dump.store_number, dump.reference_number_alt1, dump.reference_number_alt1qualifier,
+    dump.store_name, dump.address_line1, dump.address_line2, dump.city, dump.State, dump.zip, dump.phone_primary, dump.fax,
+    dump.email, dump.phone_alt1, dump.phone_alt1_qualifier,
+    dump.phone_alt2, dump.phone_alt2_qualifier, dump.phone_alt3, dump.phone_alt3_qualifier, dump.phone_alt4,
+    dump.phone_alt4_qualifier, dump.phone_alt5, dump.phone_alt5_qualifier,
+    dump.active_start_time, dump.active_end_time, dump.service_level, dump.partner_account, dump.last_modified_date,
+    dump.twenty_four_hour_flag, dump.cross_street, dump.record_change,
+    dump.old_service_level, dump.text_service_level, dump.text_service_level_change, dump.version, dump.npi, dump.is_deleted,
+    dump.specialty_type1, dump.specialty_type2, dump.specialty_type3, dump.specialty_type4, dump.type, dump.longitude, dump.latitude,
+    dump.location,file_id, user_id, user_id, file_name, 'Validated', 'Y', ex.ai_id, ex.original_ref_id, 'Updated' , user_id
+from pharmacy_standard_versions dump
+inner join pharmacies ex on ex.ncpdp_id=dump.ncpdp_id and ex.id=dump.id
+where dump.ncpdp_id=ex.ncpdp_id and ex.version_state="TValid";
+update pharmacies set version_state="InValidated" where version_state="TValid";
+
+        -- Update the batch's start_index for the next iteration
+        SET start_index = end_index;
+    END WHILE;
+    -- Updating RefId, Original_refid for newly inserting Records
+   -- UPDATE cpt SET ref_id = id, original_ref_id = id WHERE ref_id IS NULL;
+    -- Update code_change_counts with the total updated_records count
+    UPDATE code_change_counts SET updated_records = updated_records, user_id = user_id WHERE file_id = file_id AND status = 'Post Sync';
+    -- Return success status
+    SELECT 1 AS id, 0 AS added_records, updated_records AS updated_records, 0 AS deleted_records, 'success' AS status;
+END
+
+
+4)PreparePharmacyDataForVerification:
+-------------------------------------
+CREATE DEFINER=`dv_cs_db_admin`@`localhost` PROCEDURE `PreparePharmacyDataForVerification`(IN file_id INT,
+IN file_name varChar(100),
+IN user_id INT
+)
+BEGIN
+DECLARE added_records INT DEFAULT 0;
+      DECLARE updated_records INT DEFAULT 0;
+      DECLARE deleted_records INT DEFAULT 0;
+
+   -- Step 1: (Add) Insert new codes from icd_standard_versions into icdnew
+    Truncate Table pharmacy_data_verification;
+    
+    INSERT INTO pharmacy_data_verification(id, ncpdp_id, store_number, reference_number_alt1, reference_number_alt1qualifier, 
+    store_name, address_line1, address_line2, city, State, zip, phone_primary, fax, email, phone_alt1, phone_alt1_qualifier, 
+    phone_alt2, phone_alt2_qualifier, phone_alt3, phone_alt3_qualifier, phone_alt4, phone_alt4_qualifier, phone_alt5, phone_alt5_qualifier, 
+    active_start_time, active_end_time, service_level, partner_account, last_modified_date, twenty_four_hour_flag, cross_street, record_change,
+    old_service_level, text_service_level, text_service_level_change, version, npi, is_deleted, specialty_type1, 
+    specialty_type2, specialty_type3, specialty_type4, type, longitude, latitude, location, file_id, status )
+   SELECT dump.id,dump.ncpdp_id, dump.store_number, dump.reference_number_alt1, dump.reference_number_alt1qualifier, 
+    dump.store_name, dump.address_line1, dump.address_line2, dump.city, dump.State, dump.zip, dump.phone_primary, dump.fax, 
+    dump.email, dump.phone_alt1, dump.phone_alt1_qualifier, 
+    dump.phone_alt2, dump.phone_alt2_qualifier, dump.phone_alt3, dump.phone_alt3_qualifier, dump.phone_alt4, 
+    dump.phone_alt4_qualifier, dump.phone_alt5, dump.phone_alt5_qualifier, 
+    dump.active_start_time, dump.active_end_time, dump.service_level, dump.partner_account, dump.last_modified_date, 
+    dump.twenty_four_hour_flag, dump.cross_street, dump.record_change,
+    dump.old_service_level, dump.text_service_level, dump.text_service_level_change, dump.version, dump.npi, dump.is_deleted, 
+    dump.specialty_type1, dump.specialty_type2, dump.specialty_type3, dump.specialty_type4, dump.type, dump.longitude, dump.latitude, 
+    dump.location,
+   file_id,'Added'  
+
+   FROM pharmacy_standard_versions dump
+    LEFT JOIN pharmacies ex on ex.ncpdp_id=dump.ncpdp_id
+    where ex.ncpdp_id is null;
+set added_records=ROW_COUNT();
+
+  -- step2 Inserting change records as new records in existing table
+    INSERT INTO pharmacy_data_verification ( id, ncpdp_id, store_number, reference_number_alt1, reference_number_alt1qualifier, 
+    store_name, address_line1, address_line2, city, State, zip, phone_primary, fax, email, phone_alt1, phone_alt1_qualifier, 
+    phone_alt2, phone_alt2_qualifier, phone_alt3, phone_alt3_qualifier, phone_alt4, phone_alt4_qualifier, phone_alt5, phone_alt5_qualifier, 
+    active_start_time, active_end_time, service_level, partner_account, last_modified_date, twenty_four_hour_flag, cross_street, record_change,
+    old_service_level, text_service_level, text_service_level_change, version, npi, is_deleted, specialty_type1, 
+    specialty_type2, specialty_type3, specialty_type4, type, longitude, latitude, location, file_id, status)
+    SELECT dump.id,dump.ncpdp_id, dump.store_number, dump.reference_number_alt1, dump.reference_number_alt1qualifier, 
+    dump.store_name, dump.address_line1, dump.address_line2, dump.city, dump.State, dump.zip, dump.phone_primary, dump.fax, 
+    dump.email, dump.phone_alt1, dump.phone_alt1_qualifier, 
+    dump.phone_alt2, dump.phone_alt2_qualifier, dump.phone_alt3, dump.phone_alt3_qualifier, dump.phone_alt4, 
+    dump.phone_alt4_qualifier, dump.phone_alt5, dump.phone_alt5_qualifier, 
+    dump.active_start_time, dump.active_end_time, dump.service_level, dump.partner_account, dump.last_modified_date, 
+    dump.twenty_four_hour_flag, dump.cross_street, dump.record_change,
+    dump.old_service_level, dump.text_service_level, dump.text_service_level_change, dump.version, dump.npi, dump.is_deleted, 
+    dump.specialty_type1, dump.specialty_type2, dump.specialty_type3, dump.specialty_type4, dump.type, dump.longitude, dump.latitude, 
+    dump.location,
+    file_id,'Updated'
+    FROM pharmacy_standard_versions dump
+    INNER JOIN pharmacies ex on ex.ncpdp_id=dump.ncpdp_id
+    WHERE (ex.version_state = 'Validated' and ex.status='Y' ) and
+        (ex.store_number != dump.store_number
+        OR ex.reference_number_alt1 != dump.reference_number_alt1
+        OR ex.reference_number_alt1qualifier != dump.reference_number_alt1qualifier
+        OR ex.store_name != dump.store_name
+        OR ex.address_line1 != dump.address_line1
+        OR ex.address_line2 != dump.address_line2
+        OR ex.city != dump.city
+        OR ex.State != dump.State
+        OR ex.zip != dump.zip
+        OR ex.phone_primary != dump.phone_primary
+        OR ex.fax != dump.fax
+        OR ex.email != dump.email
+        OR ex.phone_alt1 != dump.phone_alt1
+        OR ex.phone_alt1_qualifier != dump.phone_alt1_qualifier
+         OR ex.phone_alt2 != dump.phone_alt2
+          OR ex.phone_alt2_qualifier != dump.phone_alt2_qualifier
+           OR ex.phone_alt3 != dump.phone_alt3
+            OR ex.phone_alt3_qualifier != dump.phone_alt3_qualifier
+             OR ex.phone_alt4 != dump.phone_alt4
+              OR ex.phone_alt4_qualifier != dump.phone_alt4_qualifier
+               OR ex.phone_alt5 != dump.phone_alt5
+                OR ex.phone_alt5_qualifier != dump.phone_alt5_qualifier
+                 OR ex.active_start_time != dump.active_start_time
+                  OR ex.active_end_time != dump.active_end_time
+                   OR ex.service_level != dump.service_level
+                    OR ex.partner_account != dump.partner_account
+                     OR ex.last_modified_date != dump.last_modified_date
+                     OR ex.twenty_four_hour_flag != dump.twenty_four_hour_flag
+                     OR ex.cross_street != dump.cross_street
+                     OR ex.record_change != dump.record_change
+                     OR ex.old_service_level != dump.old_service_level
+                     OR ex.text_service_level != dump.text_service_level
+                     OR ex.text_service_level_change != dump.text_service_level_change
+                     OR ex.version != dump.version
+                       OR ex.npi != dump.npi
+                         OR ex.is_deleted != dump.is_deleted
+                           OR ex.specialty_type1 != dump.specialty_type1
+                             OR ex.specialty_type2 != dump.specialty_type2
+                               OR ex.specialty_type3 != dump.specialty_type3
+                                 OR ex.specialty_type4 != dump.specialty_type4
+                                 OR ex.longitude != dump.longitude
+                                 OR ex.latitude != dump.latitude
+                                 OR ex.location != dump.location
+        OR ex.type!=dump.type) or (ex.version_state = 'Validated' and ex.status='N');
+
+set updated_records=ROW_COUNT();
+
+   -- Step 3: (Delete) Update status for codes not in icd_standard_versions but in icdnew
+   INSERT INTO pharmacy_data_verification ( id, ncpdp_id, store_number, reference_number_alt1, reference_number_alt1qualifier, 
+    store_name, address_line1, address_line2, city, State, zip, phone_primary, fax, email, phone_alt1, phone_alt1_qualifier, 
+    phone_alt2, phone_alt2_qualifier, phone_alt3, phone_alt3_qualifier, phone_alt4, phone_alt4_qualifier, phone_alt5, phone_alt5_qualifier, 
+    active_start_time, active_end_time, service_level, partner_account, last_modified_date, twenty_four_hour_flag, cross_street, record_change,
+    old_service_level, text_service_level, text_service_level_change, version, npi, is_deleted, specialty_type1, 
+    specialty_type2, specialty_type3, specialty_type4, type, longitude, latitude, location,
+    file_id,status)
+   SELECT  ex.id, ex.ncpdp_id, ex.store_number, ex.reference_number_alt1, ex.reference_number_alt1qualifier, 
+    ex.store_name, ex.address_line1, ex.address_line2, ex.city, ex.State, ex.zip, ex.phone_primary, ex.fax, ex.email, ex.phone_alt1, 
+    ex.phone_alt1_qualifier, 
+    ex.phone_alt2, ex.phone_alt2_qualifier, ex.phone_alt3, ex.phone_alt3_qualifier, ex.phone_alt4, ex.phone_alt4_qualifier, ex.phone_alt5, 
+    ex.phone_alt5_qualifier, 
+    ex.active_start_time, ex.active_end_time, ex.service_level, ex.partner_account, ex.last_modified_date, ex.twenty_four_hour_flag, 
+    ex.cross_street, ex.record_change,
+    ex.old_service_level, ex.text_service_level, ex.text_service_level_change, ex.version, ex.npi, ex.is_deleted, ex.specialty_type1, 
+    ex.specialty_type2, ex.specialty_type3, ex.specialty_type4, ex.type, ex.longitude, ex.latitude, ex.location,
+    file_id,'Deleted'
+	 FROM pharmacies ex
+     LEFT JOIN pharmacy_standard_versions dump on ex.ncpdp_id=dump.ncpdp_id
+     where ex.version_state='Validated' and ex.status='Y' and dump.ncpdp_id is null;
+set deleted_records=ROW_COUNT();
+
+ -- Deleting previous result based on fileid
+   delete from code_change_counts where file_id=file_id and status='Pre Sync';
+
+   -- Insert summary counts
+   INSERT INTO code_change_counts (file_id,added_records,updated_records,deleted_records,status,user_id)
+   SELECT file_id,added_records,updated_records,deleted_records,'Pre Sync', user_id;
+
+     select 1;
+END
+
+5)GetPharmacyVerificationDetails:
+----------------------------------
+CREATE DEFINER=`dv_cs_db_admin`@`localhost` PROCEDURE `GetPharmacyVerificationDetails`(
+    IN file_id int,
+    IN status varchar(50)
+)
+BEGIN
+    
+    SELECT * FROM pharmacy_data_verification vr where vr.file_id=file_id
+     and (status='' or status is null or vr.status=status);
+END
+
+
+6)GetPharmacyVerificationDetailsAddress:
+-----------------------------------------
+CREATE DEFINER=`dv_cs_db_admin`@`localhost` PROCEDURE `GetPharmacyVerificationDetailsAddress`(
+    IN file_id int,
+    IN address_line1 varchar(255),
+    IN status varchar(50)
+)
+BEGIN
+    
+    SELECT * FROM pharmacy_data_verification vr where vr.file_id=file_id
+    and (address_line1='' or address_line1 is null
+                      or vr.address_line1 LIKE CONCAT('%', address_line1, '%'))
+     and (status='' or status is null or vr.status=status);
+END
+
+
+7)GetPharmacyVerificationDetailsName:
+-------------------------------------
+CREATE DEFINER=`dv_cs_db_admin`@`localhost` PROCEDURE `GetPharmacyVerificationDetailsName`(
+    IN file_id int,
+    IN store_name varchar(255),
+    IN status varchar(50)
+)
+BEGIN
+    
+    SELECT * FROM pharmacy_data_verification vr where vr.file_id=file_id
+    and (store_name='' or store_name is null
+                      or vr.store_name LIKE CONCAT('%', store_name, '%'))
+     and (status='' or status is null or vr.status=status);
+END
+
+
+
+
+8)GetPharmacyVerificationDetailsNcpdpId:
+----------------------------------------
+CREATE DEFINER=`dv_cs_db_admin`@`localhost` PROCEDURE `GetPharmacyVerificationDetailsNcpdpId`(
+    IN file_id int,
+    IN ncpdp_id varchar(10),
+    IN status varchar(50)
+)
+BEGIN
+    
+    SELECT * FROM pharmacy_data_verification vr where vr.file_id=file_id
+    and (ncpdp_id='' or ncpdp_id is null or vr.ncpdp_id LIKE CONCAT('%', ncpdp_id, '%'))
+     and (status='' or status is null or vr.status=status);
+END
+
+
+
+9)GetPharmacyVerificationDetailsZip:
+------------------------------------
+CREATE DEFINER=`dv_cs_db_admin`@`localhost` PROCEDURE `GetPharmacyVerificationDetailsZip`(
+    IN file_id int,
+    IN zip varchar(255),
+    IN status varchar(50)
+)
+BEGIN
+    
+    SELECT * FROM pharmacy_data_verification vr where vr.file_id=file_id
+    and (zip='' or zip is null
+                      or vr.zip LIKE CONCAT('%', zip, '%'))                  
+     and (status='' or status is null or vr.status=status);
+END
+
+
+
+
+10)PharmacyPostSyncSearch:
+--------------------------
+CREATE DEFINER=`dv_cs_db_admin`@`localhost` PROCEDURE `PharmacyPostSyncSearch`(
+    IN file_id int,
+    IN ncpdp_id varchar(10),
+    IN store_name varchar(255),
+    IN address_line1 varchar(255),
+    IN zip varchar(255),
+    IN sync_status varchar(50)
+)
+BEGIN
+    
+    SELECT * FROM pharmacies vr where vr.file_id=file_id
+    and (ncpdp_id='' or ncpdp_id is null or vr.ncpdp_id LIKE CONCAT('%', ncpdp_id, '%'))
+    and (store_name='' or store_name is null
+                      or vr.store_name LIKE CONCAT('%', store_name, '%'))
+    and (address_line1='' or address_line1 is null
+                      or vr.address_line1 LIKE CONCAT('%', address_line1, '%'))
+    and (zip='' or zip is null
+                      or vr.zip LIKE CONCAT('%', zip, '%'))                  
+     and (sync_status='' or sync_status is null or vr.sync_status=sync_status);
+END
+
+
+
+
+11)PharmacyPostSyncSearchAddress:
+---------------------------------
+CREATE DEFINER=`dv_cs_db_admin`@`localhost` PROCEDURE `PharmacyPostSyncSearchAddress`(
+    IN file_id int,
+    IN address_line1 varchar(255),
+    IN sync_status varchar(50)
+)
+BEGIN
+    
+    SELECT * FROM pharmacies vr where vr.file_id=file_id
+    and (address_line1='' or address_line1 is null
+                      or vr.address_line1 LIKE CONCAT('%', address_line1, '%'))
+     and (sync_status='' or sync_status is null or vr.sync_status=sync_status);
+END
+
+
+12)PharmacyPostSyncSearchName:
+------------------------------
+CREATE DEFINER=`dv_cs_db_admin`@`localhost` PROCEDURE `PharmacyPostSyncSearchName`(
+    IN file_id int,
+    IN store_name varchar(255),
+    IN sync_status varchar(50)
+)
+BEGIN
+    
+    SELECT * FROM pharmacies vr where vr.file_id=file_id
+    and (store_name='' or store_name is null
+                      or vr.store_name LIKE CONCAT('%', store_name, '%'))
+     and (sync_status='' or sync_status is null or vr.sync_status=sync_status);
+END
+
+13)PharmacyPostSyncSearchNcpdpid:
+---------------------------------
+CREATE DEFINER=`dv_cs_db_admin`@`localhost` PROCEDURE `PharmacyPostSyncSearchNcpdpid`(
+    IN file_id int,
+    IN ncpdp_id varchar(10),
+    IN sync_status varchar(50)
+)
+BEGIN
+    
+    SELECT * FROM pharmacies vr where vr.file_id=file_id
+    and (ncpdp_id='' or ncpdp_id is null or vr.ncpdp_id LIKE CONCAT('%', ncpdp_id, '%'))
+     and (sync_status='' or sync_status is null or vr.sync_status=sync_status);
+END
+
+
+14)PharmacyPostSyncSearchZip:
+-----------------------------
+CREATE DEFINER=`dv_cs_db_admin`@`localhost` PROCEDURE `PharmacyPostSyncSearchZip`(
+    IN file_id int,
+    IN zip varchar(255),
+    IN sync_status varchar(50)
+)
+BEGIN
+    
+    SELECT * FROM pharmacies vr where vr.file_id=file_id
+    and (zip='' or zip is null
+                      or vr.zip LIKE CONCAT('%', zip, '%'))                  
+     and (sync_status='' or sync_status is null or vr.sync_status=sync_status);
+END
+
+
+
+15)create_pharmacy_backup_table:
+---------------------------------
+CREATE DEFINER=`dv_cs_db_admin`@`localhost` PROCEDURE `create_pharmacy_backup_table`()
+BEGIN
+    DECLARE current_date_str VARCHAR(14);
+    SET current_date_str = DATE_FORMAT(NOW(), '%d%m%Y%H%i');
+    SET @sql = CONCAT('CREATE TABLE pharmaciesNew_', current_date_str, ' LIKE pharmacies;');
+    PREPARE stmt FROM @sql;
+    EXECUTE stmt;
+    DEALLOCATE PREPARE stmt;
+    SET @sql = CONCAT('INSERT INTO pharmaciesNew_', current_date_str, ' SELECT * FROM pharmacies;');
+    PREPARE stmt FROM @sql;
+    EXECUTE stmt;
+    DEALLOCATE PREPARE stmt;
+
+
+END
+
+

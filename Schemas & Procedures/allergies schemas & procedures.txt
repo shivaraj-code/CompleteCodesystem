@@ -1,0 +1,399 @@
+Schemas for Allergies:
+=======================
+1)allerfies_new:
+----------------
+CREATE TABLE `allergies_new` (
+  `ai_id` int NOT NULL AUTO_INCREMENT,
+  `id` int DEFAULT NULL,
+  `dam_concept_id` varchar(45) DEFAULT NULL,
+  `dam_concept_id_desc` varchar(225) DEFAULT NULL,
+  `dam_concept_id_type` int DEFAULT NULL,
+  `dam_alrgn_grp_desc` varchar(225) DEFAULT NULL,
+  `allergy_desc` varchar(225) DEFAULT NULL,
+  `snomed_code` varchar(225) DEFAULT NULL,
+  `snomed_concept` varchar(225) DEFAULT NULL,
+  `file_id` int DEFAULT NULL,
+  `data_source` varchar(225) DEFAULT NULL,
+  `version_state` varchar(45) DEFAULT 'Validated',
+  `created_by` varchar(255) DEFAULT NULL,
+  `modified_by` varchar(255) DEFAULT NULL,
+  `modified_date` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
+  `created_date` datetime DEFAULT NULL,
+  `original_ref_Id` int DEFAULT NULL,
+  `ref_id` int DEFAULT NULL,
+  `status` varchar(5) DEFAULT 'Y',
+  `sync_status` varchar(45) DEFAULT NULL,
+  PRIMARY KEY (`ai_id`),
+  KEY `idx_id` (`id`),
+  KEY `dam_concept_id` (`dam_concept_id`),
+  FULLTEXT KEY `dam_alrgn_grp_desc` (`dam_alrgn_grp_desc`,`dam_concept_id_desc`,`allergy_desc`)
+) ENGINE=InnoDB AUTO_INCREMENT=16384 DEFAULT CHARSET=utf8mb3
+
+
+2)allergies_data_verification:
+------------------------------
+CREATE TABLE `allergies_data_verification` (
+  `ai_id` int NOT NULL AUTO_INCREMENT,
+  `id` int DEFAULT NULL,
+  `dam_concept_id` varchar(225) DEFAULT NULL,
+  `dam_concept_id_desc` varchar(225) DEFAULT NULL,
+  `dam_concept_id_type` int DEFAULT NULL,
+  `dam_alrgn_grp_desc` varchar(225) DEFAULT NULL,
+  `snomed_code` varchar(225) DEFAULT NULL,
+  `snomed_concept` varchar(225) DEFAULT NULL,
+  `file_id` int DEFAULT NULL,
+  `inserted_date` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
+  `status` varchar(45) DEFAULT NULL,
+  `verification_state` varchar(50) DEFAULT NULL,
+  PRIMARY KEY (`ai_id`)
+) ENGINE=InnoDB AUTO_INCREMENT=16384 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci
+
+
+3)allergies_standard_versions:
+------------------------------
+CREATE TABLE `allergies_standard_versions` (
+  `ai_id` int NOT NULL AUTO_INCREMENT,
+  `id` int DEFAULT NULL,
+  `dam_concept_id` varchar(225) DEFAULT NULL,
+  `dam_concept_id_desc` varchar(225) DEFAULT NULL,
+  `dam_concept_id_type` int DEFAULT NULL,
+  `dam_alrgn_grp_desc` varchar(225) DEFAULT NULL,
+  `snomed_code` varchar(225) DEFAULT NULL,
+  `snomed_concept` varchar(225) DEFAULT NULL,
+  PRIMARY KEY (`ai_id`),
+  KEY `id` (`id`),
+  KEY `dam_concept_id` (`dam_concept_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci
+
+
+
+Stored Procedures for Allergies:
+================================
+1)AllergiesCompareAndSyncTablesAdded:
+-------------------------------------
+CREATE DEFINER=`dv_cs_db_admin`@`localhost` PROCEDURE `AllergiesCompareAndSyncTablesAdded`(
+  IN file_id INT,
+  IN file_name varChar(100),
+  IN user_id INT
+)
+BEGIN
+    -- Variables to store the record counts
+    DECLARE added_records INT DEFAULT 0;
+
+     -- Step 0:backup current table
+    CALL create_allergies_new_backup_table();
+
+   -- Step 1: (Add) Insert new codes from allergies_standard_versions into allergies_new
+
+  -- Insert Into allergies_new(Id,dam_concept_id,dam_concept_id_desc,dam_concept_id_type,dam_alrgn_grp_desc,allergy_desc,snomed_code,snomed_concept,
+-- file_id,data_source,version_State,Status,created_by,modified_by,sync_status)
+
+
+Insert Into allergies_new(id,dam_concept_id,dam_concept_id_desc,dam_concept_id_type,dam_alrgn_grp_desc,allergy_desc,snomed_code,snomed_concept,
+file_id,data_source,version_state,status,created_by,modified_by,sync_status)
+
+
+select distinct dump.Id,dump.dam_concept_id,dump.dam_concept_id_desc,dump.dam_concept_id_type,
+dump.dam_alrgn_grp_desc,
+
+case when nullif(dump.dam_alrgn_grp_desc,'') is null then dump.dam_concept_id_desc
+	 when dump.dam_alrgn_grp_desc!=dump.dam_concept_id_desc then concat(dump.dam_concept_id_desc,' - ',dump.dam_alrgn_grp_desc)
+     else dump.dam_concept_id_desc end AllergyDesc
+,dump.snomed_code,dump.snomed_concept,file_id,file_name,'Validated','Y',user_id,user_id,'Added'
+
+from allergies_standard_versions dump
+
+left join allergies_new ex on ex.dam_concept_id=dump.dam_concept_id and ex.dam_concept_id_type=dump.dam_concept_id_type and ex.snomed_code=dump.snomed_code and ex.snomed_concept=dump.snomed_concept
+ where ex.dam_concept_id is null;
+
+    -- Update the updated_records count
+        SET added_records = ROW_COUNT();
+        
+-- Updating RefId, Original_refid for newly inserting Records
+   -- UPDATE allergies_new SET ref_id = ai_id, original_ref_id = ai_id  WHERE  ref_id IS NULL;
+   UPDATE allergies_new SET original_ref_id = ai_id  WHERE original_ref_id IS NULL;
+ 
+    
+   -- Deleting previous result based on fileid
+    delete from code_change_counts where file_id=file_id and status='Post Sync';
+    
+    -- INSERT INTO icd_sync_data_result (file_id,added_records,updated_records,deleted_records,status)
+   INSERT INTO code_change_counts (file_id,added_records,status,user_id)
+ 
+   SELECT file_id,added_records,'Post Sync',user_id;
+   
+    -- Return the record counts
+  SELECT 1 as id, 0 as added_records, 0 as updated_records , 0 as deleted_records,'success' status;
+    
+    END
+
+
+2)AllergiesCompareAndSyncTablesBatchUpdatedWithConcat:
+-----------------------------------------------------
+CREATE DEFINER=`dv_cs_db_admin`@`localhost` PROCEDURE `AllergiesCompareAndSyncTablesBatchUpdatedWithConcat`(IN file_id INT,
+    IN file_name VARCHAR(100),
+    IN user_id INT)
+BEGIN
+    DECLARE batch_size INT DEFAULT 20000;
+    DECLARE start_index INT DEFAULT 0;
+    DECLARE end_index INT;
+    DECLARE total_records INT;
+    DECLARE updated_records INT DEFAULT 0;
+
+
+
+    -- Get the total number of records in the cpt table
+    SELECT COUNT(*) INTO total_records FROM allergies_new;
+
+
+    WHILE start_index < total_records DO
+
+        -- Calculate the end index for the current batch
+        SET end_index = start_index + batch_size;
+
+        -- Step 1: Your existing update logic
+
+        UPDATE allergies_new ex
+
+       INNER JOIN allergies_standard_versions dump ON dump.dam_concept_id = ex.dam_concept_id and dump.dam_concept_id_type=ex.dam_concept_id_type and dump.snomed_code=ex.snomed_code and dump.snomed_concept=ex.snomed_concept
+
+        SET ex.version_state = 'TValid', ex.modified_date = NOW(),
+            ex.file_id = file_id, ex.modified_by = user_id
+
+
+       WHERE
+            ((ex.status ='Y' and ex.version_state='Validated') and
+         (ex.dam_concept_id != dump.dam_concept_id
+        OR ex.dam_concept_id_type != dump.dam_concept_id_type
+        OR ex.dam_alrgn_grp_desc!=dump.dam_alrgn_grp_desc
+        OR ex.snomed_code!=dump.snomed_code
+        OR ex.snomed_concept!=dump.snomed_concept))or (ex.status ='N' and ex.version_state='Validated');
+
+
+        -- Get the count of updated records in this batch
+        SET updated_records = updated_records + ROW_COUNT();
+
+
+        -- Insert changed records as new records in the existing table
+       Insert Into allergies_new(id,dam_concept_id,dam_concept_id_desc,dam_concept_id_type,dam_alrgn_grp_desc,allergy_desc,snomed_code,snomed_concept,
+                       file_id,data_source,version_state,status,created_by,modified_by,ref_id,original_ref_id,sync_status)
+
+        select  dump.id, dump.dam_concept_id,dump.dam_concept_id_desc,dump.dam_concept_id_type,
+            dump.dam_alrgn_grp_desc,
+            case when nullif(dump.dam_alrgn_grp_desc,'') is null then dump.dam_concept_id_desc
+	         when dump.dam_alrgn_grp_desc!=dump.dam_concept_id_desc then concat(dump.dam_concept_id_desc,' - ',dump.dam_alrgn_grp_desc)
+            else dump.dam_concept_id_desc end allergydesc
+           ,dump.snomed_code,dump.snomed_concept,file_id,file_name,'Validated','Y',user_id,user_id , ex.ai_id , ex.original_ref_id, 'Updated'
+
+
+        FROM allergies_standard_versions dump
+
+       INNER JOIN allergies_new ex on ex.dam_concept_id=dump.dam_concept_id and ex.dam_concept_id_type =dump.dam_concept_id_type and ex.snomed_code =dump.snomed_code and ex.snomed_concept =dump.snomed_concept
+
+        WHERE ex.version_state="TValid";
+
+        -- Update the batch's start_index for the next iteration
+        SET start_index = end_index;
+
+
+    END WHILE;
+
+    -- Updating RefId, Original_refid for newly inserting Records
+ --   UPDATE allergies_new  SET ref_id = ai_id, original_ref_id = ai_id  WHERE  ref_id IS NULL;
+ 
+    -- Update code_change_counts with the total updated_records count
+    UPDATE code_change_counts SET updated_records = updated_records, user_id = user_id WHERE file_id = file_id AND status = 'Post Sync';
+
+    -- Return success status
+    SELECT 1 AS id, 0 AS added_records, updated_records AS updated_records, 0 AS deleted_records, 'success' AS status;
+END
+
+
+3)AllergiesCompareAndSyncTablesDeleted:
+--------------------------------------
+CREATE DEFINER=`dv_cs_db_admin`@`localhost` PROCEDURE `AllergiesCompareAndSyncTablesDeleted`(
+  IN file_id INT,
+  IN file_name varChar(100),
+  IN user_id INT
+  )
+BEGIN
+
+-- Variables to store the record counts
+
+ DECLARE deleted_records INT DEFAULT 0;
+ 
+  -- Step 4: (Delete) Update status for codes not in allergies_standard_versions but in icdnew
+    UPDATE allergies_new ex
+    
+   -- left JOIN allergies_standard_versions dump ON dump.id = ex.id
+
+    left JOIN allergies_standard_versions dump ON dump.dam_concept_id= ex.dam_concept_id and dump.dam_concept_id_type = ex.dam_concept_id_type and dump.snomed_code = ex.snomed_code and dump.snomed_concept= ex.snomed_concept
+    SET ex.version_state='InValidated', ex.modified_date=now(), ex.file_id=file_id, ex.modified_by=user_id
+    where dump.id is null  and ex.status ='Y'  and ex.version_state='Validated';
+
+ 
+    -- step 5:(Delete) Insert the deleted codes change status 'N'
+
+   INSERT INTO allergies_new (id,dam_concept_id,dam_concept_id_desc,dam_concept_id_type,dam_alrgn_grp_desc,snomed_code,snomed_concept,
+   file_id,data_source,version_state,status,sync_status)
+
+  SELECT  dump.id,dump.dam_concept_id,dump.dam_concept_id_desc,dump.dam_concept_id_type,dump.dam_alrgn_grp_desc,dump.snomed_code,dump.snomed_concept,
+    file_id,data_source,'Validated','N','Deleted'
+    FROM allergies_new ex
+
+   -- left JOIN allergies_standard_versions dump ON dump.id = ex.id
+    left JOIN allergies_standard_versions dump ON dump.dam_concept_id = ex.dam_concept_id and dump.dam_concept_id_type=ex.dam_concept_id_type and dump.snomed_code=ex.snomed_code and dump.snomed_concept=ex.snomed_concept
+    where dump.id is null;
+    
+     -- Updating RefId, Original_refid for newly Deleting Records
+   -- UPDATE allergies_new SET ref_id = ai_id, original_ref_id = ai_id  WHERE  ref_id IS NULL;
+    
+    -- Update the deleted_records count
+    SET deleted_records = ROW_COUNT();
+    
+    UPDATE code_change_counts set deleted_records=deleted_records,user_id=user_id where  file_id=file_id and status="Post Sync";
+    
+      SELECT 1 as id, 0 as added_records, 0 as updated_records , 0 as deleted_records,'success' status;
+
+   END
+
+
+4)PrepareAllergiesDataForVerificaton:
+--------------------------------------
+CREATE DEFINER=`dv_cs_db_admin`@`localhost` PROCEDURE `PrepareAllergiesDataForVerification`(
+    IN file_id INT,
+    IN file_name VARCHAR(100),
+    IN user_id INT
+)
+BEGIN
+    DECLARE added_records INT DEFAULT 0;
+    DECLARE updated_records INT DEFAULT 0;
+    DECLARE deleted_records INT DEFAULT 0;
+
+    -- Step 1: (Add) Insert new codes from  allergies_standard_versions into allergies_new
+
+    TRUNCATE TABLE  allergies_data_verification;
+
+    INSERT INTO  allergies_data_verification (id, dam_concept_id, dam_concept_id_desc, dam_concept_id_type, dam_alrgn_grp_desc, snomed_code, snomed_concept, file_id, status,verification_state)
+    SELECT distinct dump.id, dump.dam_concept_id, dump.dam_concept_id_desc, dump.dam_concept_id_type, dump.dam_alrgn_grp_desc, dump.snomed_code, dump.snomed_concept, file_id, 'Added',null
+    FROM  allergies_standard_versions dump
+    
+    
+    LEFT JOIN allergies_new ex1 ON ex1.dam_concept_id = dump.dam_concept_id AND ex1.dam_concept_id_type= dump.dam_concept_id_type AND ex1.snomed_code= dump.snomed_code AND ex1.snomed_concept= dump.snomed_concept
+    
+    WHERE ex1.id IS NULL;
+    SET added_records = ROW_COUNT();
+    
+    -- Step 2: Inserting change records as new records in the existing table
+    INSERT INTO  allergies_data_verification (id, dam_concept_id, dam_concept_id_desc, dam_concept_id_type, dam_alrgn_grp_desc, snomed_code, snomed_concept, file_id, status,verification_state)
+    SELECT  dump.id, dump.dam_concept_id, dump.dam_concept_id_desc, dump.dam_concept_id_type, dump.dam_alrgn_grp_desc, dump.snomed_code, dump.snomed_concept, file_id, 'Updated',null
+    FROM  allergies_standard_versions dump
+    
+   INNER JOIN allergies_new ex2 ON ex2.dam_concept_id = dump.dam_concept_id AND ex2.dam_concept_id_type = dump.dam_concept_id_type AND ex2.snomed_code = dump.snomed_code AND ex2.snomed_concept = dump.snomed_concept
+	  
+
+    WHERE
+         ((ex2.status ='Y' and ex2.version_state='Validated') and
+         (ex2.dam_concept_id != dump.dam_concept_id
+        OR ex2.dam_concept_id_type != dump.dam_concept_id_type
+        OR ex2.dam_alrgn_grp_desc!=dump.dam_alrgn_grp_desc
+        OR ex2.snomed_code!=dump.snomed_code
+        OR ex2.snomed_concept!=dump.snomed_concept))or (ex2.status ='N' and ex2.version_state='Validated');
+    -- (
+     --   ex2.dam_concept_id != dump.dam_concept_id
+      --  OR ex2.dam_concept_id_desc != dump.dam_concept_id_desc
+     --   OR ex2.dam_alrgn_grp_desc != dump.dam_alrgn_grp_desc
+     --   OR ex2.dam_concept_id_type != dump.dam_concept_id_type
+    --    OR ex2.snomed_code != dump.snomed_code
+     --   OR ex2.snomed_concept != dump.snomed_concept)
+     --   and ex2.status ='Y' and ex2.version_state='Validated';
+    SET updated_records = ROW_COUNT();
+    
+    -- Step 3: (Delete) Update status for codes not in  allergies_standard_versions but in allergies_new
+    INSERT INTO  allergies_data_verification (id, dam_concept_id, dam_concept_id_desc, dam_concept_id_type, dam_alrgn_grp_desc, snomed_code,file_id, status,verification_state)
+    SELECT  ex2.id, ex2.dam_concept_id, ex2.dam_concept_id_desc, ex2.dam_concept_id_type, ex2.dam_alrgn_grp_desc, ex2.snomed_code, file_id, 'Deleted',null
+    FROM allergies_new ex2
+    
+    LEFT JOIN  allergies_standard_versions dump ON ex2.dam_concept_id= dump.dam_concept_id AND ex2.dam_concept_id_type = dump.dam_concept_id_type AND ex2.snomed_code = dump.snomed_code AND ex2.snomed_concept = dump.snomed_concept
+    WHERE dump.id IS NULL and ex2.status ='Y'  and ex2.version_state='Validated';
+    SET deleted_records = ROW_COUNT();
+    -- Deleting previous result based on fileid
+    DELETE FROM code_change_counts WHERE file_id = file_id AND status = 'Pre Sync';
+    -- Insert summary counts
+    INSERT INTO code_change_counts (file_id, added_records, updated_records, deleted_records, status, user_id)
+    SELECT file_id, added_records, updated_records, deleted_records, 'Pre Sync', user_id;
+    SELECT 1;
+END
+
+
+5)GetAllerfiesCodeVerificatonDetails:
+-------------------------------------
+CREATE DEFINER=`dv_cs_db_admin`@`localhost` PROCEDURE `GetAllergiesCodeVerificationDetails`(
+    IN fileid INT,
+    IN searchterm VARCHAR(255),
+    IN status VARCHAR(50)
+)
+BEGIN
+    SELECT * FROM allergies_data_verification vr
+     WHERE vr.file_id = fileid
+      AND (searchterm = '' OR searchterm IS NULL
+           OR vr.dam_concept_id_desc LIKE CONCAT('%', searchterm, '%')
+           OR vr.dam_alrgn_grp_desc LIKE CONCAT('%', searchterm, '%')
+          )
+      AND (status ='' OR status IS NULL OR status = vr.status);
+END
+
+
+6)GetAllergiesAfterSyncDetails:
+-------------------------------
+CREATE DEFINER=`dv_cs_db_admin`@`localhost` PROCEDURE `GetAllergiesAfterSyncDetails`(
+    IN fileid INT,
+    IN searchterm VARCHAR(255),
+    IN status VARCHAR(50)
+)
+BEGIN
+    SELECT * FROM allergies_new ag
+     WHERE ag.file_id = fileid
+     AND (searchterm = '' OR searchterm IS NULL
+           OR ag.dam_concept_id_desc LIKE CONCAT('%', searchterm, '%')
+           OR ag.dam_alrgn_grp_desc LIKE CONCAT('%', searchterm, '%')
+          )
+     AND (sync_status = '' OR sync_status IS NULL OR ag.sync_status = sync_status);
+END
+
+
+7)GetAllergiesPostSyncData:
+---------------------------
+CREATE DEFINER=`dv_cs_db_admin`@`localhost` PROCEDURE `GetAllergiesPostSyncData`(
+IN file_id int,
+IN status varChar(100)
+)
+BEGIN
+IF status = 'All' THEN
+SELECT * FROM allergies_new ex WHERE file_id=ex.file_id and version_state="Validated";
+elseif status = 'Added' THEN
+SELECT * FROM allergies_new ex WHERE file_id=ex.file_id and sync_status='Added';
+elseif status = 'Updated' THEN
+SELECT * FROM allergies_new ex WHERE file_id=ex.file_id and sync_status='Updated';
+elseif status = 'Deleted' THEN
+SELECT * FROM allergies_new ex WHERE file_id=ex.file_id and sync_status='Deleted';
+END IF;
+END
+
+
+8)create_allergies_new_backup_table:
+------------------------------------
+CREATE DEFINER=`dv_cs_db_admin`@`localhost` PROCEDURE `create_allergies_new_backup_table`()
+BEGIN
+    DECLARE current_date_str VARCHAR(14);
+    SET current_date_str = DATE_FORMAT(NOW(), '%d%m%Y%H%i');
+    SET @sql = CONCAT('CREATE TABLE allergies_new_', current_date_str, ' LIKE allergies_new;');
+    PREPARE stmt FROM @sql;
+    EXECUTE stmt;
+    DEALLOCATE PREPARE stmt;
+    SET @sql = CONCAT('INSERT INTO allergies_new_', current_date_str, ' SELECT * FROM allergies_new;');
+    PREPARE stmt FROM @sql;
+    EXECUTE stmt;
+    DEALLOCATE PREPARE stmt;
+END
+
